@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'about_page.dart';
+import 'home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -6,81 +8,52 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: '2048 Puzzle',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'About'),
+      home: const MainScreen(), // Updated to use MainScreen with BottomNav
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MainScreenState extends State<MainScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = [
+    const HomePage(),
+    const AboutPage(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    var queryData = MediaQuery.of(context);
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          bool isPortrait = orientation == Orientation.portrait;
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  SizedBox(height: isPortrait ? 125 : 50),
-                  Image.asset(
-                    'assets/images/2048.png',
-                    width: isPortrait
-                        ? queryData.size.width * 0.6
-                        : queryData.size.width * 0.3,
-                  ),
-                  const SizedBox(height: 25),
-                  SizedBox(
-                    width: queryData.size.width * 0.95,
-                    child: const Text(
-                      'Swipe in any direction to slide all tiles on the grid.\n'
-                      'Two tiles with the same number will combine.\n'
-                      'Reach 2048 to win the game.\n Good luck!',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  SizedBox(height: isPortrait ? 50 : 20),
-                  SizedBox(
-                    width: queryData.size.width * 0.95,
-                    child: const Padding(
-                      padding: EdgeInsets.only(bottom: 20),
-                      child: Text(
-                        'Developed by Moiseychenko Nikita and Abishev Beibarys in the scope of the course “Crossplatform Development” at Astana IT University. '
-                        'Mentor (Teacher): Assistant Professor Abzal Kyzyrkanov',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: "About"),
+        ],
       ),
     );
   }
