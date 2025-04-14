@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class HomePage extends StatefulWidget {
+  final void Function(Locale) setLocale;
+
+  const HomePage({super.key, required this.setLocale});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String _selectedLang = 'kk'; // default language
 
   @override
   Widget build(BuildContext context) {
@@ -14,12 +23,36 @@ class HomePage extends StatelessWidget {
             return SingleChildScrollView(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600), // Prevents stretching on tablets
+                  constraints: const BoxConstraints(maxWidth: 600),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        // 🌐 Language Selector Dropdown
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            const Text("Language: "),
+                            DropdownButton<String>(
+                              value: _selectedLang,
+                              items: const [
+                                DropdownMenuItem(value: 'en', child: Text("English")),
+                                DropdownMenuItem(value: 'ru', child: Text("Русский")),
+                                DropdownMenuItem(value: 'kk', child: Text("Қазақша")),
+                              ],
+                              onChanged: (lang) {
+                                if (lang != null) {
+                                  setState(() {
+                                    _selectedLang = lang;
+                                    widget.setLocale(Locale(lang));
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+
                         const SizedBox(height: 20),
 
                         // Game Logo
