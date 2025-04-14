@@ -17,7 +17,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  Locale _locale = const Locale('kk'); // Default language
+  static Locale _locale = const Locale('kk'); // Default language
 
   void _setLocale(Locale newLocale) {
     setState(() {

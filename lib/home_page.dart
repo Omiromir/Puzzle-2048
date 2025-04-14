@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:game_2048/main.dart';
 import 'about_page.dart';
 import 'game_page.dart';
 import 'settings_page.dart';
 import 'leaderboard_page.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomePage extends StatefulWidget {
   final void Function(Locale) setLocale;
@@ -13,13 +15,14 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  String _selectedLang = 'kk'; // default language
+class _HomePageState extends State<HomePage> {// default language
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    Locale selectedLang=Localizations.localeOf(context);
     return Scaffold(
-      appBar: AppBar(title: const Text("Home")),
+      appBar: AppBar(title:  Text(t.homeTitle)),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -38,9 +41,9 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            const Text("Language: "),
+                            Text("${t.language}:"),
                             DropdownButton<String>(
-                              value: _selectedLang,
+                              value: selectedLang.toString(),
                               items: const [
                                 DropdownMenuItem(value: 'en', child: Text("English")),
                                 DropdownMenuItem(value: 'ru', child: Text("Русский")),
@@ -49,7 +52,7 @@ class _HomePageState extends State<HomePage> {
                               onChanged: (lang) {
                                 if (lang != null) {
                                   setState(() {
-                                    _selectedLang = lang;
+                                    selectedLang = Locale(lang);
                                     widget.setLocale(Locale(lang));
                                   });
                                 }
@@ -72,9 +75,9 @@ class _HomePageState extends State<HomePage> {
                             color: Colors.deepPurple,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            "Best Score: 20480",
-                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          child: Text(
+                            t.bestScore(15465),
+                            style: const TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
 
@@ -87,7 +90,7 @@ class _HomePageState extends State<HomePage> {
                             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                             backgroundColor: Colors.deepPurple,
                           ),
-                          child: const Text("Play", style: TextStyle(fontSize: 22, color: Colors.white)),
+                          child: Text(t.play, style: TextStyle(fontSize: 22, color: Colors.white)),
                         ),
 
                         const SizedBox(height: 30),
@@ -104,7 +107,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           itemCount: 4,
                           itemBuilder: (context, index) {
-                            List<String> labels = ["New Game", "Leaderboard", "Settings", "How to Play"];
+                            List<String> labels = [t.newGame, t.leaderboard, t.settings, t.howToPlay];
                             List<IconData> icons = [Icons.play_arrow, Icons.emoji_events, Icons.settings, Icons.help];
 
                             return InkWell(
@@ -138,7 +141,7 @@ class _HomePageState extends State<HomePage> {
                                   children: [
                                     Icon(icons[index], size: 40, color: Colors.white),
                                     const SizedBox(height: 10),
-                                    Text(labels[index], style: const TextStyle(fontSize: 18, color: Colors.white)),
+                                    Text(labels[index], style: const TextStyle(fontSize: 18, color: Colors.white,),textAlign: TextAlign.center,),
                                   ],
                                 ),
                               ),
