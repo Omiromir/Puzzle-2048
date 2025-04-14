@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-
+import 'about_page.dart';
+import 'game_page.dart';
+import 'settings_page.dart';
+import 'leaderboard_page.dart';
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text("Home")),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -69,15 +73,40 @@ class HomePage extends StatelessWidget {
                             List<String> labels = ["New Game", "Leaderboard", "Settings", "How to Play"];
                             List<IconData> icons = [Icons.play_arrow, Icons.emoji_events, Icons.settings, Icons.help];
 
-                            return Card(
-                              color: Colors.teal,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(icons[index], size: 40, color: Colors.white),
-                                  const SizedBox(height: 10),
-                                  Text(labels[index], style: const TextStyle(fontSize: 18, color: Colors.white)),
-                                ],
+                            return InkWell(
+                              onTap: () {
+                                switch (index) {
+                                  case 0:
+                                  // Navigate to New Game screen
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const NewGamePage()),
+                                    );
+                                    break;
+                                  case 1:
+                                  // Navigate to Leaderboard screen
+                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const LeaderboardPage()));
+                                    break;
+                                  case 2:
+                                  // Navigate to Settings screen
+                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage()));
+                                    break;
+                                  case 3:
+                                  // Navigate to About screen
+                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutPage()));
+                                    break;
+                                }
+                              },
+                              child: Card(
+                                color: Colors.teal,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(icons[index], size: 40, color: Colors.white),
+                                    const SizedBox(height: 10),
+                                    Text(labels[index], style: const TextStyle(fontSize: 18, color: Colors.white)),
+                                  ],
+                                ),
                               ),
                             );
                           },
