@@ -1,28 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:game_2048/main.dart';
-import 'about_page.dart';
-import 'game_page.dart';
-import 'settings_page.dart';
-import 'leaderboard_page.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'game_page.dart';
+import 'leaderboard_page.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   final void Function(Locale) setLocale;
 
   const HomePage({super.key, required this.setLocale});
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {// default language
-
-  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    Locale selectedLang=Localizations.localeOf(context);
+
     return Scaffold(
-      appBar: AppBar(title:  Text(t.homeTitle)),
+      appBar: AppBar(title: Text(t.homeTitle)),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -37,30 +28,6 @@ class _HomePageState extends State<HomePage> {// default language
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // 🌐 Language Selector Dropdown
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text("${t.language}:"),
-                            DropdownButton<String>(
-                              value: selectedLang.toString(),
-                              items: const [
-                                DropdownMenuItem(value: 'en', child: Text("English")),
-                                DropdownMenuItem(value: 'ru', child: Text("Русский")),
-                                DropdownMenuItem(value: 'kk', child: Text("Қазақша")),
-                              ],
-                              onChanged: (lang) {
-                                if (lang != null) {
-                                  setState(() {
-                                    selectedLang = Locale(lang);
-                                    widget.setLocale(Locale(lang));
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-
                         const SizedBox(height: 20),
 
                         // Game Logo
@@ -85,17 +52,21 @@ class _HomePageState extends State<HomePage> {// default language
 
                         // Play Button
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const NewGamePage()));
+                          },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                             backgroundColor: Colors.deepPurple,
                           ),
-                          child: Text(t.play, style: TextStyle(fontSize: 22, color: Colors.white)),
+                          child: Text(t.play,
+                              style: const TextStyle(fontSize: 22, color: Colors.white)),
                         ),
 
                         const SizedBox(height: 30),
 
-                        // Responsive Features Grid
+                        // Grid: New Game & Leaderboard only
                         GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -105,35 +76,23 @@ class _HomePageState extends State<HomePage> {// default language
                             mainAxisSpacing: 10,
                             childAspectRatio: isWide ? 1.1 : 1.2,
                           ),
-                          itemCount: 4,
+                          itemCount: 2,
                           itemBuilder: (context, index) {
-                            List<String> labels = [t.newGame, t.leaderboard, t.settings, t.howToPlay];
-                            List<IconData> icons = [Icons.play_arrow, Icons.emoji_events, Icons.settings, Icons.help];
+                            List<String> labels = [t.newGame, t.leaderboard];
+                            List<IconData> icons = [Icons.play_arrow, Icons.emoji_events];
+                            List<VoidCallback> actions = [
+                              () => Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const NewGamePage()),
+                                  ),
+                              () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const LeaderboardPage()),
+                                  ),
+                            ];
 
                             return InkWell(
-                              onTap: () {
-                                switch (index) {
-                                  case 0:
-                                  // Navigate to New Game screen
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const NewGamePage()),
-                                    );
-                                    break;
-                                  case 1:
-                                  // Navigate to Leaderboard screen
-                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const LeaderboardPage()));
-                                    break;
-                                  case 2:
-                                  // Navigate to Settings screen
-                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage()));
-                                    break;
-                                  case 3:
-                                  // Navigate to About screen
-                                    Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutPage()));
-                                    break;
-                                }
-                              },
+                              onTap: actions[index],
                               child: Card(
                                 color: Colors.teal,
                                 child: Column(
@@ -141,7 +100,11 @@ class _HomePageState extends State<HomePage> {// default language
                                   children: [
                                     Icon(icons[index], size: 40, color: Colors.white),
                                     const SizedBox(height: 10),
-                                    Text(labels[index], style: const TextStyle(fontSize: 18, color: Colors.white,),textAlign: TextAlign.center,),
+                                    Text(
+                                      labels[index],
+                                      style: const TextStyle(fontSize: 18, color: Colors.white),
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ],
                                 ),
                               ),

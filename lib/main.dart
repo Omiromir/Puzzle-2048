@@ -4,6 +4,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'about_page.dart';
 import 'home_page.dart';
+import 'settings_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,11 +18,18 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  static Locale _locale = const Locale('kk'); // Default language
+  static Locale _locale = const Locale('kk');
+  ThemeMode _themeMode = ThemeMode.system;
 
   void _setLocale(Locale newLocale) {
     setState(() {
       _locale = newLocale;
+    });
+  }
+
+  void _setThemeMode(ThemeMode mode) {
+    setState(() {
+      _themeMode = mode;
     });
   }
 
@@ -31,13 +39,19 @@ class _MyAppState extends State<MyApp> {
       title: '2048 Puzzle',
       debugShowCheckedModeBanner: false,
       locale: _locale,
+      themeMode: _themeMode,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData.dark(),
       supportedLocales: const [
         Locale('en'),
         Locale('ru'),
         Locale('kk'),
       ],
       localizationsDelegates: const [
-        AppLocalizations.delegate, // ✅ Use generated localization
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
@@ -51,21 +65,22 @@ class _MyAppState extends State<MyApp> {
         }
         return const Locale('kk');
       },
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
-      home: MainScreen(setLocale: _setLocale),
+      routes: {
+        '/': (context) => MainScreen(setLocale: _setLocale, setThemeMode: _setThemeMode),
+        '/settings': (context) => SettingsPage(
+              setLocale: _setLocale,
+              setThemeMode: _setThemeMode,
+            ),
+      },
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
   final void Function(Locale) setLocale;
+  final void Function(ThemeMode) setThemeMode;
 
-  const MainScreen({super.key, required this.setLocale});
+  const MainScreen({super.key, required this.setLocale, required this.setThemeMode});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -82,6 +97,7 @@ class _MainScreenState extends State<MainScreen> {
     _pages = [
       HomePage(setLocale: widget.setLocale),
       const AboutPage(),
+      SettingsPage(setLocale: widget.setLocale, setThemeMode: widget.setThemeMode),
     ];
     super.initState();
   }
@@ -125,6 +141,7 @@ class _MainScreenState extends State<MainScreen> {
         items: [
           BottomNavigationBarItem(icon: const Icon(Icons.home), label: t.homeTitle),
           BottomNavigationBarItem(icon: const Icon(Icons.info), label: t.aboutTitle),
+          BottomNavigationBarItem(icon: const Icon(Icons.settings), label: t.settings),
         ],
       ),
     );

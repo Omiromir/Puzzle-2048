@@ -6,6 +6,8 @@
   "play": "Ойнау",
   "bestScore": "Ең жақсы ұпай: {score}",
   "language": "Тіл",
+  "theme": "Тақырып",
+
   
   "newGame": "Жаңа ойын",
   "leaderboard": "Көшбасшылар",

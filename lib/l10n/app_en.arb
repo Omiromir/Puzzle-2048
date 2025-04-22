@@ -6,6 +6,8 @@
   "play": "Play",
   "bestScore": "Best Score: {score}",
   "language": "Language",
+  "theme": "Theme",
+
   "newGame": "New Game",
   "leaderboard": "Leaderboard",
   "settings": "Settings",

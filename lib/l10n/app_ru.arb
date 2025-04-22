@@ -6,6 +6,9 @@
   "play": "Играть",
   "bestScore": "Лучший счет: {score}",
   "language": "Язык",
+  "theme": "Тема",
+
+
   "newGame": "Новая игра",
   "leaderboard": "Таблица лидеров",
   "settings": "Настройки",
