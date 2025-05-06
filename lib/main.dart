@@ -14,8 +14,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
-  runApp(const MyApp());
+  runApp(const MyApp()); // ✅ Only one call to runApp
 }
 
 class MyApp extends StatefulWidget {
@@ -26,8 +25,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  FirebaseDatabase database = FirebaseDatabase.instance;
-  static Locale _locale = const Locale('kk');
+  final FirebaseDatabase database = FirebaseDatabase.instance;
+
+  Locale _locale = const Locale('kk');
   ThemeMode _themeMode = ThemeMode.system;
 
   void _setLocale(Locale newLocale) {
@@ -75,7 +75,8 @@ class _MyAppState extends State<MyApp> {
         return const Locale('kk');
       },
       routes: {
-        '/': (context) => MainScreen(setLocale: _setLocale, setThemeMode: _setThemeMode),
+        '/': (context) =>
+            MainScreen(setLocale: _setLocale, setThemeMode: _setThemeMode),
         '/settings': (context) => SettingsPage(
               setLocale: _setLocale,
               setThemeMode: _setThemeMode,
@@ -89,7 +90,11 @@ class MainScreen extends StatefulWidget {
   final void Function(Locale) setLocale;
   final void Function(ThemeMode) setThemeMode;
 
-  const MainScreen({super.key, required this.setLocale, required this.setThemeMode});
+  const MainScreen({
+    super.key,
+    required this.setLocale,
+    required this.setThemeMode,
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -106,7 +111,10 @@ class _MainScreenState extends State<MainScreen> {
     _pages = [
       HomePage(setLocale: widget.setLocale),
       const AboutPage(),
-      SettingsPage(setLocale: widget.setLocale, setThemeMode: widget.setThemeMode),
+      SettingsPage(
+        setLocale: widget.setLocale,
+        setThemeMode: widget.setThemeMode,
+      ),
     ];
     super.initState();
   }
@@ -148,9 +156,18 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: [
-          BottomNavigationBarItem(icon: const Icon(Icons.home), label: t.homeTitle),
-          BottomNavigationBarItem(icon: const Icon(Icons.info), label: t.aboutTitle),
-          BottomNavigationBarItem(icon: const Icon(Icons.settings), label: t.settings),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home),
+            label: t.homeTitle,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.info),
+            label: t.aboutTitle,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.settings),
+            label: t.settings,
+          ),
         ],
       ),
     );
