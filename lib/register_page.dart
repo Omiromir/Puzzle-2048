@@ -11,20 +11,30 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _error = '';
+  final _formKey = GlobalKey<FormState>();
+  bool _loading = false;
+  String? _error;
 
   Future<void> _register() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      Navigator.pushReplacementNamed(context, '/home');
     } on FirebaseAuthException catch (e) {
       setState(() {
-        _error = e.message ?? 'Registration failed';
+        _error = e.message;
       });
     }
+
+    setState(() {
+      _loading = false;
+    });
   }
 
   @override
@@ -32,32 +42,41 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Register')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _register,
-              child: const Text('Register'),
-            ),
-            if (_error.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Text(
-                  _error,
-                  style: const TextStyle(color: Colors.red),
-                ),
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              if (_error != null)
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                validator: (v) => v!.contains('@') ? null : 'Enter a valid email',
               ),
-          ],
+              TextFormField(
+                controller: _passwordController,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+                validator: (v) => v!.length < 6 ? 'Minimum 6 characters' : null,
+              ),
+              const SizedBox(height: 16),
+              _loading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) _register();
+                },
+                child: const Text('Register'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+                child: const Text('Already have an account? Log in'),
+              ),
+            ],
+          ),
         ),
       ),
     );

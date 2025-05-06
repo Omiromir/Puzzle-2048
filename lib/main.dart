@@ -1,21 +1,25 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:game_2048/register_page.dart';
 import 'firebase_options.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 import 'about_page.dart';
 import 'home_page.dart';
+import 'login_page.dart';
 import 'settings_page.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp()); // ✅ Only one call to runApp
+  runApp(const MyApp());
 }
+
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -27,7 +31,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final FirebaseDatabase database = FirebaseDatabase.instance;
 
-  Locale _locale = const Locale('kk');
+  Locale _locale = const Locale('kk'); // Default to Kazakh
   ThemeMode _themeMode = ThemeMode.system;
 
   void _setLocale(Locale newLocale) {
@@ -74,13 +78,30 @@ class _MyAppState extends State<MyApp> {
         }
         return const Locale('kk');
       },
-      routes: {
-        '/': (context) =>
-            MainScreen(setLocale: _setLocale, setThemeMode: _setThemeMode),
-        '/settings': (context) => SettingsPage(
+      // 👇 Listen to the user's auth state
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasData) {
+            return MainScreen(
               setLocale: _setLocale,
               setThemeMode: _setThemeMode,
-            ),
+            );
+          } else {
+            return const LoginPage();
+          }
+        },
+      ),
+      routes: {
+        '/settings': (context) => SettingsPage(
+          setLocale: _setLocale,
+          setThemeMode: _setThemeMode,
+        ),
+        '/register': (context) => const RegisterPage(),
+        '/login': (context) => const LoginPage(),
       },
     );
   }
@@ -108,6 +129,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void initState() {
+    super.initState();
     _pages = [
       HomePage(setLocale: widget.setLocale),
       const AboutPage(),
@@ -116,18 +138,14 @@ class _MainScreenState extends State<MainScreen> {
         setThemeMode: widget.setThemeMode,
       ),
     ];
-    super.initState();
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _onPageChanged(int index) {
@@ -161,7 +179,8 @@ class _MainScreenState extends State<MainScreen> {
             label: t.homeTitle,
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.info),
+            icon: const Icon(Icons.
+            info),
             label: t.aboutTitle,
           ),
           BottomNavigationBarItem(
