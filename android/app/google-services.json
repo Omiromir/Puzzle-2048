@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "552764090603",
+    "project_id": "puzzle-2048-4e974",
+    "storage_bucket": "puzzle-2048-4e974.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:552764090603:android:b1935bbdf857ec939476ae",
+        "android_client_info": {
+          "package_name": "com.example.game_2048"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_3Hls0vs0N9t5XzN-jn6Hh4Q7Ag9sZCI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
