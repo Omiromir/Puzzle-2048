@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 🔹 Add this import
-import '../main.dart'; // Replace with your actual import if MainScreen is elsewhere
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final VoidCallback onSwitchToRegister;
+
+  const LoginPage({super.key, required this.onSwitchToRegister});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -29,35 +31,27 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
 
-      // 🔹 Fetch user settings from Firestore
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
 
       if (userDoc.exists) {
         final data = userDoc.data();
-        final language = data?['language'] ?? 'kk'; // Default to 'kk' if not found
-        final theme = data?['theme'] ?? 'system'; // Default to 'system' if not found
+        final language = data?['language'] ?? 'kk';
+        final theme = data?['theme'] ?? 'system';
 
-        // 🔹 Pass the language and theme to MainScreen
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MainScreen(
-                setLocale: (locale) {
-                  // Apply locale here
-                },
-                setThemeMode: (themeMode) {
-                  // Apply theme mode here
-                },
-              ),
-            ),
-          );
-        }
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('language', language);
+        await prefs.setString('theme', theme);
       }
+
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -82,9 +76,8 @@ class _LoginPageState extends State<LoginPage> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value != null && value.contains('@')
-                    ? null
-                    : 'Enter a valid email',
+                validator: (value) =>
+                value != null && value.contains('@') ? null : 'Enter a valid email',
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -95,25 +88,22 @@ class _LoginPageState extends State<LoginPage> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (value) => value != null && value.length >= 6
-                    ? null
-                    : 'Minimum 6 characters',
+                validator: (value) =>
+                value != null && value.length >= 6 ? null : 'Minimum 6 characters',
               ),
               const SizedBox(height: 24),
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _login();
-                        }
-                      },
-                      child: const Text('Login'),
-                    ),
-              TextButton(
                 onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/register');
+                  if (_formKey.currentState!.validate()) {
+                    _login();
+                  }
                 },
+                child: const Text('Login'),
+              ),
+              TextButton(
+                onPressed: widget.onSwitchToRegister,
                 child: const Text('Don’t have an account? Register'),
               ),
             ],

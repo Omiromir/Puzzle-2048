@@ -5,9 +5,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:game_2048/register_page.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
-import 'package:firebase_database/firebase_database.dart';
 
 import 'about_page.dart';
 import 'home_page.dart';
@@ -16,109 +16,97 @@ import 'settings_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  final settingsController = SettingsController();
+  await settingsController.loadFromPrefs();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: settingsController,
+      child: const MyApp(),
+    ),
   );
-  runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  final FirebaseDatabase database = FirebaseDatabase.instance;
-
-  Locale _locale = const Locale('kk'); // Default to Kazakh
-  ThemeMode _themeMode = ThemeMode.system;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCachedSettings();
-  }
-
-  Future<void> _loadCachedSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lang = prefs.getString('language') ?? 'kk';
-    final theme = prefs.getString('theme') ?? 'system';
-
-    setState(() {
-      _locale = Locale(lang);
-      _themeMode = theme == 'dark'
-          ? ThemeMode.dark
-          : theme == 'light'
-              ? ThemeMode.light
-              : ThemeMode.system;
-    });
-  }
-
-  void _setLocale(Locale newLocale) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', newLocale.languageCode);
-    setState(() {
-      _locale = newLocale;
-    });
-  }
-
-  void _setThemeMode(ThemeMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme',
-        mode == ThemeMode.dark ? 'dark' : mode == ThemeMode.light ? 'light' : 'system');
-    setState(() {
-      _themeMode = mode;
-    });
-  }
-  
-  @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsController>(context);
+
     return MaterialApp(
       title: '2048 Puzzle',
       debugShowCheckedModeBanner: false,
-      locale: _locale,
-      themeMode: _themeMode,
+      locale: settings.locale,
+      themeMode: settings.themeMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       darkTheme: ThemeData.dark(),
-      supportedLocales: const [
-        Locale('en'),
-        Locale('ru'),
-        Locale('kk'),
-      ],
+      supportedLocales: const [Locale('en'), Locale('ru'), Locale('kk')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      localeResolutionCallback: (locale, supportedLocales) {
-        if (locale == null) return const Locale('kk');
-        for (var supported in supportedLocales) {
-          if (supported.languageCode == locale.languageCode) {
-            return supported;
-          }
-        }
-        return const Locale('kk');
-      },
       home: AuthGate(
-        setLocale: _setLocale,
-        setThemeMode: _setThemeMode,
+        setLocale: settings.updateLocale,
+        setThemeMode: settings.updateTheme,
       ),
       routes: {
-        '/settings': (context) => SettingsPage(
-          setLocale: _setLocale,
-          setThemeMode: _setThemeMode,
-          currentThemeMode:
-          Theme.of(context).brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
-          currentLocale: Localizations.localeOf(context),
+        '/settings': (_) => SettingsPage(
+          setLocale: settings.updateLocale,
+          setThemeMode: settings.updateTheme,
+          currentLocale: settings.locale,
+          currentThemeMode: settings.themeMode,
         ),
-        '/register': (context) => const RegisterPage(),
-        '/login': (context) => const LoginPage(),
+      },
+    );
+  }
+}
+
+class AuthGate extends StatefulWidget {
+  final void Function(Locale) setLocale;
+  final void Function(ThemeMode) setThemeMode;
+
+  const AuthGate({
+    super.key,
+    required this.setLocale,
+    required this.setThemeMode,
+  });
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool showLogin = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData) {
+          return MainScreen(
+            setLocale: widget.setLocale,
+            setThemeMode: widget.setThemeMode,
+          );
+        }
+
+        return showLogin
+            ? LoginPage(onSwitchToRegister: () => setState(() => showLogin = false))
+            : RegisterPage(onSwitchToLogin: () => setState(() => showLogin = true));
       },
     );
   }
@@ -141,61 +129,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
-  bool _pagesInitialized=false;
-  late final List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserSettings(); // Fetch settings on load
-  }
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_pagesInitialized) {
-      _pages = [
-        HomePage(setLocale: widget.setLocale),
-        const AboutPage(),
-        SettingsPage(
-          setLocale: widget.setLocale,
-          setThemeMode: widget.setThemeMode,
-          currentThemeMode: Theme
-              .of(context)
-              .brightness == Brightness.dark
-              ? ThemeMode.dark
-              : ThemeMode.light,
-          currentLocale: Localizations.localeOf(context),
-        ),
-      ];
-      _pagesInitialized=true;
-    }
-  }
-
-
-  Future<void> _loadUserSettings() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data();
-        final lang = data?['language'] ?? 'kk';
-        final theme = data?['theme'] ?? 'system';
-
-        widget.setLocale(Locale(lang));
-        widget.setThemeMode(
-          theme == 'dark'
-              ? ThemeMode.dark
-              : theme == 'light'
-                  ? ThemeMode.light
-                  : ThemeMode.system,
-        );
-      }
-    }
-  }
 
   void _onItemTapped(int index) {
     _pageController.animateToPage(
@@ -212,20 +145,24 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-
     return Scaffold(
       body: PageView(
         controller: _pageController,
         onPageChanged: _onPageChanged,
-        children: _pages,
+        children: [
+          HomePage(setLocale: widget.setLocale),
+          const AboutPage(),
+          SettingsPage(
+            currentThemeMode: Theme.of(context).brightness == Brightness.dark
+                ? ThemeMode.dark
+                : ThemeMode.light,
+            currentLocale: Localizations.localeOf(context),
+
+            setLocale: widget.setLocale,
+            setThemeMode: widget.setThemeMode,
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -233,49 +170,70 @@ class _MainScreenState extends State<MainScreen> {
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.home),
-            label: t.homeTitle,
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.info),
-            label: t.aboutTitle,
+            label: 'About',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.settings),
-            label: t.settings,
+            label: 'Settings',
           ),
         ],
       ),
     );
   }
 }
-class AuthGate extends StatelessWidget {
-  final void Function(Locale) setLocale;
-  final void Function(ThemeMode) setThemeMode;
 
-  const AuthGate({
-    super.key,
-    required this.setLocale,
-    required this.setThemeMode,
-  });
+class SettingsController extends ChangeNotifier {
+  Locale _locale = const Locale('kk');
+  ThemeMode _themeMode = ThemeMode.system;
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Locale get locale => _locale;
+  ThemeMode get themeMode => _themeMode;
 
-        if (snapshot.hasData) {
-          return MainScreen(
-            setLocale: setLocale,
-            setThemeMode: setThemeMode,
-          );
-        } else {
-          return const LoginPage();
-        }
-      },
-    );
+  Future<void> loadFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _locale = Locale(prefs.getString('language') ?? 'kk');
+    final theme = prefs.getString('theme') ?? 'system';
+    _themeMode = _getThemeModeFromString(theme);
+    notifyListeners();
+  }
+
+  Future<void> updateLocale(Locale newLocale) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', newLocale.languageCode);
+    _locale = newLocale;
+    notifyListeners();
+  }
+
+  Future<void> updateTheme(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('theme', _getStringFromThemeMode(mode));
+    _themeMode = mode;
+    notifyListeners();
+  }
+
+  ThemeMode _getThemeModeFromString(String value) {
+    switch (value) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  String _getStringFromThemeMode(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'light';
+      case ThemeMode.dark:
+        return 'dark';
+      default:
+        return 'system';
+    }
   }
 }

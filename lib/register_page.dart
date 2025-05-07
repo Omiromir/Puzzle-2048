@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 🔹 Add this
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  final VoidCallback onSwitchToLogin;
+
+  const RegisterPage({super.key, required this.onSwitchToLogin});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -28,22 +31,23 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordController.text,
       );
 
-      // 🔹 Store default preferences in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
+      final uid = userCredential.user!.uid;
+
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'language': 'kk',
         'theme': 'system',
       });
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language', 'kk');
+      await prefs.setString('theme', 'system');
+
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -68,9 +72,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value != null && value.contains('@')
-                    ? null
-                    : 'Enter a valid email',
+                validator: (value) =>
+                value != null && value.contains('@') ? null : 'Enter a valid email',
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -81,25 +84,22 @@ class _RegisterPageState extends State<RegisterPage> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (value) => value != null && value.length >= 6
-                    ? null
-                    : 'Minimum 6 characters',
+                validator: (value) =>
+                value != null && value.length >= 6 ? null : 'Minimum 6 characters',
               ),
               const SizedBox(height: 24),
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _register();
-                        }
-                      },
-                      child: const Text('Register'),
-                    ),
-              TextButton(
                 onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/login');
+                  if (_formKey.currentState!.validate()) {
+                    _register();
+                  }
                 },
+                child: const Text('Register'),
+              ),
+              TextButton(
+                onPressed: widget.onSwitchToLogin,
                 child: const Text('Already have an account? Log in'),
               ),
             ],
