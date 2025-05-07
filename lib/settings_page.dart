@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
   final void Function(Locale) setLocale;
@@ -31,20 +33,37 @@ class _SettingsPageState extends State<SettingsPage> {
     _selectedTheme = widget.currentThemeMode;
   }
 
+  // Save the language and theme settings to Firestore
+  void _saveSettingsToFirestore() async {
+    FirebaseAuth auth = FirebaseAuth.instance;
+    User? user = auth.currentUser;
+
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'languageCode': _selectedLanguage,
+        'themeMode': _selectedTheme == ThemeMode.dark ? 'dark' : 'light',
+      }, SetOptions(merge: true));
+    }
+  }
+
+  // Language change handler
   void _onLanguageChanged(String? newLang) {
     if (newLang == null || _selectedLanguage == newLang) return;
     setState(() {
       _selectedLanguage = newLang;
     });
     widget.setLocale(Locale(newLang));
+    _saveSettingsToFirestore(); // Save language setting
   }
 
+  // Theme change handler
   void _onThemeChanged(ThemeMode? newTheme) {
     if (newTheme == null || _selectedTheme == newTheme) return;
     setState(() {
       _selectedTheme = newTheme;
     });
     widget.setThemeMode(newTheme);
+    _saveSettingsToFirestore(); // Save theme setting
   }
 
   @override
@@ -97,6 +116,11 @@ class _SettingsPageState extends State<SettingsPage> {
             // Logout Button
             ElevatedButton.icon(
               onPressed: () async {
+                // Clear SharedPreferences on logout
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                prefs.clear();
+
+                // Log out from Firebase
                 await FirebaseAuth.instance.signOut();
               },
               icon: const Icon(Icons.logout),

@@ -17,16 +17,7 @@ import 'settings_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  final settingsController = SettingsController();
-  await settingsController.loadFromPrefs();
-
-  runApp(
-    ChangeNotifierProvider.value(
-      value: settingsController,
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -34,38 +25,59 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = Provider.of<SettingsController>(context);
+    return FutureBuilder(
+      future: _loadSettings(), // Load settings before building the app
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const MaterialApp(home: Center(child: CircularProgressIndicator())); // Loading state
+        }
 
-    return MaterialApp(
-      title: '2048 Puzzle',
-      debugShowCheckedModeBanner: false,
-      locale: settings.locale,
-      themeMode: settings.themeMode,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData.dark(),
-      supportedLocales: const [Locale('en'), Locale('ru'), Locale('kk')],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: AuthGate(
-        setLocale: settings.updateLocale,
-        setThemeMode: settings.updateTheme,
-      ),
-      routes: {
-        '/settings': (_) => SettingsPage(
-          setLocale: settings.updateLocale,
-          setThemeMode: settings.updateTheme,
-          currentLocale: settings.locale,
-          currentThemeMode: settings.themeMode,
-        ),
+        if (snapshot.hasError) {
+          return const MaterialApp(home: Center(child: Text("Error loading settings"))); // Error state
+        }
+
+        final settings = snapshot.data as SettingsController;
+        return ChangeNotifierProvider.value(
+          value: settings,
+          child: MaterialApp(
+            title: '2048 Puzzle',
+            debugShowCheckedModeBanner: false,
+            locale: settings.locale,
+            themeMode: settings.themeMode,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              useMaterial3: true,
+            ),
+            darkTheme: ThemeData.dark(),
+            supportedLocales: const [Locale('en'), Locale('ru'), Locale('kk')],
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: AuthGate(
+              setLocale: settings.updateLocale,
+              setThemeMode: settings.updateTheme,
+            ),
+            routes: {
+              '/settings': (_) => SettingsPage(
+                    setLocale: settings.updateLocale,
+                    setThemeMode: settings.updateTheme,
+                    currentLocale: settings.locale,
+                    currentThemeMode: settings.themeMode,
+                  ),
+            },
+          ),
+        );
       },
     );
+  }
+
+  Future<SettingsController> _loadSettings() async {
+    final settingsController = SettingsController();
+    await settingsController.loadFromPrefs();
+    return settingsController;
   }
 }
 
@@ -98,6 +110,8 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         if (snapshot.hasData) {
+          // Fetch preferences from Firestore after login
+          _fetchUserPreferences();
           return MainScreen(
             setLocale: widget.setLocale,
             setThemeMode: widget.setThemeMode,
@@ -105,10 +119,44 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         return showLogin
-            ? LoginPage(onSwitchToRegister: () => setState(() => showLogin = false))
-            : RegisterPage(onSwitchToLogin: () => setState(() => showLogin = true));
+            ? LoginPage(
+                onSwitchToRegister: () => setState(() => showLogin = false))
+            : RegisterPage(
+                onSwitchToLogin: () => setState(() => showLogin = true));
       },
     );
+  }
+
+  Future<void> _fetchUserPreferences() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final docSnapshot = await userDoc.get();
+
+      if (docSnapshot.exists) {
+        final userData = docSnapshot.data()!;
+        final String languageCode = userData['language'] ?? 'kk';
+        final String themeMode = userData['theme'] ?? 'system';
+
+        // Update settings controller with fetched data
+        final settingsController =
+            Provider.of<SettingsController>(context, listen: false);
+        settingsController.updateLocale(Locale(languageCode));
+        settingsController.updateTheme(_getThemeModeFromString(themeMode));
+      }
+    }
+  }
+
+  ThemeMode _getThemeModeFromString(String value) {
+    switch (value) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
   }
 }
 
@@ -158,7 +206,6 @@ class _MainScreenState extends State<MainScreen> {
                 ? ThemeMode.dark
                 : ThemeMode.light,
             currentLocale: Localizations.localeOf(context),
-
             setLocale: widget.setLocale,
             setThemeMode: widget.setThemeMode,
           ),
@@ -218,13 +265,16 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
 
     // Update Firestore with the new theme
-    await _updateUserPreferenceInFirestore('theme', _getStringFromThemeMode(mode));
+    await _updateUserPreferenceInFirestore(
+        'theme', _getStringFromThemeMode(mode));
   }
 
-  Future<void> _updateUserPreferenceInFirestore(String field, String value) async {
+  Future<void> _updateUserPreferenceInFirestore(
+      String field, String value) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final userDoc =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
       await userDoc.update({field: value});
     }
   }
