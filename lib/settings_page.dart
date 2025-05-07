@@ -4,11 +4,15 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 class SettingsPage extends StatefulWidget {
   final void Function(Locale) setLocale;
   final void Function(ThemeMode) setThemeMode;
+  final ThemeMode currentThemeMode;
+  final Locale currentLocale;
 
   const SettingsPage({
     super.key,
     required this.setLocale,
     required this.setThemeMode,
+    required this.currentThemeMode,
+    required this.currentLocale,
   });
 
   @override
@@ -16,8 +20,32 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String _selectedLang = 'kk';
-  ThemeMode _themeMode = ThemeMode.system;
+  late String _selectedLanguage;
+  late ThemeMode _selectedTheme;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _selectedLanguage = widget.currentLocale.languageCode;
+    _selectedTheme = widget.currentThemeMode;
+  }
+
+  void _onLanguageChanged(String? newLang) {
+    if (newLang == null) return;
+    setState(() {
+      _selectedLanguage = newLang;
+    });
+    widget.setLocale(Locale(newLang));
+  }
+
+  void _onThemeChanged(ThemeMode? newTheme) {
+    if (newTheme == null) return;
+    setState(() {
+      _selectedTheme = newTheme;
+    });
+    widget.setThemeMode(newTheme);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,52 +53,43 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(t.settings)),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
-            // Language Selector
-            Text(t.language, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            DropdownButton<String>(
-              value: _selectedLang,
-              isExpanded: true,
-              items: const [
-                DropdownMenuItem(value: 'en', child: Text("English")),
-                DropdownMenuItem(value: 'ru', child: Text("Русский")),
-                DropdownMenuItem(value: 'kk', child: Text("Қазақша")),
+            // Language Dropdown
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(t.language),
+                DropdownButton<String>(
+                  value: _selectedLanguage,
+                  onChanged: _onLanguageChanged,
+                  items: const [
+                    DropdownMenuItem(value: 'en', child: Text('English')),
+                    DropdownMenuItem(value: 'ru', child: Text('Русский')),
+                    DropdownMenuItem(value: 'kk', child: Text('Қазақша')),
+                  ],
+                ),
               ],
-              onChanged: (lang) {
-                if (lang != null) {
-                  setState(() {
-                    _selectedLang = lang;
-                  });
-                  widget.setLocale(Locale(lang));
-                }
-              },
             ),
+            const SizedBox(height: 16),
 
-            const SizedBox(height: 32),
-
-            // Theme Selector
-            Text(t.theme, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            DropdownButton<ThemeMode>(
-              value: _themeMode,
-              isExpanded: true,
-              items: const [
-                DropdownMenuItem(value: ThemeMode.system, child: Text("System")),
-                DropdownMenuItem(value: ThemeMode.light, child: Text("Light")),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text("Dark")),
+            // Theme Dropdown
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(t.theme),
+                DropdownButton<ThemeMode>(
+                  value: _selectedTheme,
+                  onChanged: _onThemeChanged,
+                  items: const [
+                    DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+                    DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                    DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                  ],
+                ),
               ],
-              onChanged: (mode) {
-                if (mode != null) {
-                  setState(() {
-                    _themeMode = mode;
-                  });
-                  widget.setThemeMode(mode);
-                }
-              },
             ),
           ],
         ),

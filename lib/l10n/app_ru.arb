@@ -7,6 +7,7 @@
   "bestScore": "Лучший счет: {score}",
   "language": "Язык",
   "theme": "Тема",
+  "logout": "Выйти",
 
 
   "newGame": "Новая игра",

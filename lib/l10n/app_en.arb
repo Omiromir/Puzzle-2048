@@ -7,6 +7,7 @@
   "bestScore": "Best Score: {score}",
   "language": "Language",
   "theme": "Theme",
+  "logout": "Log out",
 
   "newGame": "New Game",
   "leaderboard": "Leaderboard",
