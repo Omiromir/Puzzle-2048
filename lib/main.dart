@@ -105,35 +105,18 @@ class _MyAppState extends State<MyApp> {
         }
         return const Locale('kk');
       },
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasData) {
-            return MainScreen(
-              setLocale: _setLocale,
-              setThemeMode: _setThemeMode,
-            );
-          } else {
-            // Reset to default
-            _setLocale(const Locale('kk'));
-            _setThemeMode(ThemeMode.system);
-            return const LoginPage();
-          }
-        },
+      home: AuthGate(
+        setLocale: _setLocale,
+        setThemeMode: _setThemeMode,
       ),
-
       routes: {
         '/settings': (context) => SettingsPage(
-              setLocale: _setLocale,
-              setThemeMode: _setThemeMode,
-              currentThemeMode: Theme.of(context).brightness == Brightness.dark
-          ? ThemeMode.dark
-          : ThemeMode.light,
-              currentLocale: Localizations.localeOf(context),
-            ),
+          setLocale: _setLocale,
+          setThemeMode: _setThemeMode,
+          currentThemeMode:
+          Theme.of(context).brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+          currentLocale: Localizations.localeOf(context),
+        ),
         '/register': (context) => const RegisterPage(),
         '/login': (context) => const LoginPage(),
       },
@@ -158,26 +141,36 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  bool _pagesInitialized=false;
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    _pages = [
-      HomePage(setLocale: widget.setLocale),
-      const AboutPage(),
-      SettingsPage(
-      setLocale: widget.setLocale,
-      setThemeMode: widget.setThemeMode,
-      currentThemeMode: Theme.of(context).brightness == Brightness.dark
-          ? ThemeMode.dark
-          : ThemeMode.light,
-      currentLocale: Localizations.localeOf(context),
-    ),
-
-    ];
     _loadUserSettings(); // Fetch settings on load
   }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_pagesInitialized) {
+      _pages = [
+        HomePage(setLocale: widget.setLocale),
+        const AboutPage(),
+        SettingsPage(
+          setLocale: widget.setLocale,
+          setThemeMode: widget.setThemeMode,
+          currentThemeMode: Theme
+              .of(context)
+              .brightness == Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
+          currentLocale: Localizations.localeOf(context),
+        ),
+      ];
+      _pagesInitialized=true;
+    }
+  }
+
 
   Future<void> _loadUserSettings() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -252,6 +245,37 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+class AuthGate extends StatelessWidget {
+  final void Function(Locale) setLocale;
+  final void Function(ThemeMode) setThemeMode;
+
+  const AuthGate({
+    super.key,
+    required this.setLocale,
+    required this.setThemeMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasData) {
+          return MainScreen(
+            setLocale: setLocale,
+            setThemeMode: setThemeMode,
+          );
+        } else {
+          return const LoginPage();
+        }
+      },
     );
   }
 }
