@@ -17,7 +17,16 @@ import 'settings_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+
+  final settings = SettingsController();
+  await settings.loadFromPrefs();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: settings,
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -25,51 +34,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _loadSettings(), // Load settings before building the app
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const MaterialApp(home: Center(child: CircularProgressIndicator())); // Loading state
-        }
+    final settings = Provider.of<SettingsController>(context);
 
-        if (snapshot.hasError) {
-          return const MaterialApp(home: Center(child: Text("Error loading settings"))); // Error state
-        }
-
-        final settings = snapshot.data as SettingsController;
-        return ChangeNotifierProvider.value(
-          value: settings,
-          child: MaterialApp(
-            title: '2048 Puzzle',
-            debugShowCheckedModeBanner: false,
-            locale: settings.locale,
-            themeMode: settings.themeMode,
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-              useMaterial3: true,
-            ),
-            darkTheme: ThemeData.dark(),
-            supportedLocales: const [Locale('en'), Locale('ru'), Locale('kk')],
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            home: AuthGate(
-              setLocale: settings.updateLocale,
-              setThemeMode: settings.updateTheme,
-            ),
-            routes: {
-              '/settings': (_) => SettingsPage(
-                    setLocale: settings.updateLocale,
-                    setThemeMode: settings.updateTheme,
-                    currentLocale: settings.locale,
-                    currentThemeMode: settings.themeMode,
-                  ),
-            },
-          ),
-        );
+    return MaterialApp(
+      title: '2048 Puzzle',
+      debugShowCheckedModeBanner: false,
+      locale: settings.locale,
+      themeMode: settings.themeMode,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData.dark(),
+      supportedLocales: const [Locale('en'), Locale('ru'), Locale('kk')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: AuthGate(
+        setLocale: settings.updateLocale,
+        setThemeMode: settings.updateTheme,
+      ),
+      routes: {
+        '/settings': (_) => SettingsPage(
+          setLocale: settings.updateLocale,
+          setThemeMode: settings.updateTheme,
+          currentLocale: settings.locale,
+          currentThemeMode: settings.themeMode,
+        ),
       },
     );
   }
@@ -110,13 +104,20 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         if (snapshot.hasData) {
-          // Fetch preferences from Firestore after login
-          _fetchUserPreferences();
-          return MainScreen(
-            setLocale: widget.setLocale,
-            setThemeMode: widget.setThemeMode,
+          return FutureBuilder(
+            future: _fetchUserPreferences(), // Wait for preferences
+            builder: (context, settingsSnapshot) {
+              if (settingsSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              }
+              return MainScreen(
+                setLocale: widget.setLocale,
+                setThemeMode: widget.setThemeMode,
+              );
+            },
           );
         }
+
 
         return showLogin
             ? LoginPage(
@@ -249,25 +250,23 @@ class SettingsController extends ChangeNotifier {
   }
 
   Future<void> updateLocale(Locale newLocale) async {
+    if (_locale == newLocale) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', newLocale.languageCode);
     _locale = newLocale;
     notifyListeners();
-
-    // Update Firestore with the new locale
     await _updateUserPreferenceInFirestore('language', newLocale.languageCode);
   }
 
   Future<void> updateTheme(ThemeMode mode) async {
+    if (_themeMode == mode) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme', _getStringFromThemeMode(mode));
     _themeMode = mode;
     notifyListeners();
-
-    // Update Firestore with the new theme
-    await _updateUserPreferenceInFirestore(
-        'theme', _getStringFromThemeMode(mode));
+    await _updateUserPreferenceInFirestore('theme', _getStringFromThemeMode(mode));
   }
+
 
   Future<void> _updateUserPreferenceInFirestore(
       String field, String value) async {
