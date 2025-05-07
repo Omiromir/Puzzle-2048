@@ -206,6 +206,9 @@ class SettingsController extends ChangeNotifier {
     await prefs.setString('language', newLocale.languageCode);
     _locale = newLocale;
     notifyListeners();
+
+    // Update Firestore with the new locale
+    await _updateUserPreferenceInFirestore('language', newLocale.languageCode);
   }
 
   Future<void> updateTheme(ThemeMode mode) async {
@@ -213,6 +216,17 @@ class SettingsController extends ChangeNotifier {
     await prefs.setString('theme', _getStringFromThemeMode(mode));
     _themeMode = mode;
     notifyListeners();
+
+    // Update Firestore with the new theme
+    await _updateUserPreferenceInFirestore('theme', _getStringFromThemeMode(mode));
+  }
+
+  Future<void> _updateUserPreferenceInFirestore(String field, String value) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      await userDoc.update({field: value});
+    }
   }
 
   ThemeMode _getThemeModeFromString(String value) {

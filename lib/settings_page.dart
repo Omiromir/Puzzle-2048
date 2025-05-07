@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -26,13 +27,12 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-
     _selectedLanguage = widget.currentLocale.languageCode;
     _selectedTheme = widget.currentThemeMode;
   }
 
   void _onLanguageChanged(String? newLang) {
-    if (newLang == null) return;
+    if (newLang == null || _selectedLanguage == newLang) return;
     setState(() {
       _selectedLanguage = newLang;
     });
@@ -40,7 +40,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _onThemeChanged(ThemeMode? newTheme) {
-    if (newTheme == null) return;
+    if (newTheme == null || _selectedTheme == newTheme) return;
     setState(() {
       _selectedTheme = newTheme;
     });
@@ -90,6 +90,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ],
+            ),
+
+            const SizedBox(height: 32),
+
+            // Logout Button
+            ElevatedButton.icon(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+              },
+              icon: const Icon(Icons.logout),
+              label: Text(t.logout),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
