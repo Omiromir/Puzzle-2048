@@ -19,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
   String? _error;
 
+  // Function to log in the user with email and password
   Future<void> _login() async {
     setState(() {
       _loading = true;
@@ -44,14 +45,35 @@ class _LoginPageState extends State<LoginPage> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('language', language);
         await prefs.setString('theme', theme);
-      }
 
+        // Once preferences are set, proceed to navigate to the main screen
+        Navigator.of(context).pushReplacementNamed('/main'); // Replace with actual route to main screen
+      }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  // Function for guest login, skipping Firestore and authentication
+  Future<void> _loginAsGuest() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    // Skip authentication and firestore, set default preferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', 'kk'); // Default language (could be dynamic)
+    await prefs.setString('theme', 'system'); // Default theme
+
+    // After setting preferences, navigate to the main page or home
+    if (mounted) {
+      setState(() => _loading = false);
+      Navigator.of(context).pushReplacementNamed('/main'); // Replace with actual route to main screen
     }
   }
 
@@ -102,6 +124,12 @@ class _LoginPageState extends State<LoginPage> {
                 },
                 child: const Text('Login'),
               ),
+              // Button for guest mode login
+              TextButton(
+                onPressed: _loginAsGuest,
+                child: const Text('Go as a Guest'),
+              ),
+              // Switch to Register page
               TextButton(
                 onPressed: widget.onSwitchToRegister,
                 child: const Text('Don’t have an account? Register'),

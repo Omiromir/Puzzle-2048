@@ -63,15 +63,19 @@ class MyApp extends StatelessWidget {
           setThemeMode: settings.updateTheme,
           currentLocale: settings.locale,
           currentThemeMode: settings.themeMode,
+          userEmail: FirebaseAuth.instance.currentUser?.email,
         ),
+        '/main': (context) {
+          final settings = Provider.of<SettingsController>(context, listen: false);
+          return MainScreen(
+            setLocale: settings.updateLocale,
+            setThemeMode: settings.updateTheme,
+          );
+        },
+
+
       },
     );
-  }
-
-  Future<SettingsController> _loadSettings() async {
-    final settingsController = SettingsController();
-    await settingsController.loadFromPrefs();
-    return settingsController;
   }
 }
 
@@ -117,7 +121,6 @@ class _AuthGateState extends State<AuthGate> {
             },
           );
         }
-
 
         return showLogin
             ? LoginPage(
@@ -209,6 +212,7 @@ class _MainScreenState extends State<MainScreen> {
             currentLocale: Localizations.localeOf(context),
             setLocale: widget.setLocale,
             setThemeMode: widget.setThemeMode,
+            userEmail: FirebaseAuth.instance.currentUser?.email,
           ),
         ],
       ),
@@ -266,7 +270,6 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
     await _updateUserPreferenceInFirestore('theme', _getStringFromThemeMode(mode));
   }
-
 
   Future<void> _updateUserPreferenceInFirestore(
       String field, String value) async {
