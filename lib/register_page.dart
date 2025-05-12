@@ -26,7 +26,8 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -42,6 +43,9 @@ class _RegisterPageState extends State<RegisterPage> {
       await prefs.setString('language', 'kk');
       await prefs.setString('theme', 'system');
 
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/main');
+      }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -63,7 +67,14 @@ class _RegisterPageState extends State<RegisterPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _emailController,
@@ -72,8 +83,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                value != null && value.contains('@') ? null : 'Enter a valid email',
+                validator: (value) => value != null && value.contains('@')
+                    ? null
+                    : 'Enter a valid email',
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -84,20 +96,21 @@ class _RegisterPageState extends State<RegisterPage> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (value) =>
-                value != null && value.length >= 6 ? null : 'Minimum 6 characters',
+                validator: (value) => value != null && value.length >= 6
+                    ? null
+                    : 'Minimum 6 characters',
               ),
               const SizedBox(height: 24),
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _register();
-                  }
-                },
-                child: const Text('Register'),
-              ),
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _register();
+                        }
+                      },
+                      child: const Text('Register'),
+                    ),
               TextButton(
                 onPressed: widget.onSwitchToLogin,
                 child: const Text('Already have an account? Log in'),

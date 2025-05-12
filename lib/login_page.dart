@@ -27,7 +27,8 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
@@ -46,8 +47,8 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('language', language);
         await prefs.setString('theme', theme);
 
-        // Once preferences are set, proceed to navigate to the main screen
-        Navigator.of(context).pushReplacementNamed('/main'); // Replace with actual route to main screen
+        Navigator.of(context).pushReplacementNamed(
+            '/main'); // Replace with actual route to main screen
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
@@ -67,13 +68,15 @@ class _LoginPageState extends State<LoginPage> {
 
     // Skip authentication and firestore, set default preferences
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language', 'kk'); // Default language (could be dynamic)
+    await prefs.setString(
+        'language', 'kk'); // Default language (could be dynamic)
     await prefs.setString('theme', 'system'); // Default theme
 
     // After setting preferences, navigate to the main page or home
     if (mounted) {
       setState(() => _loading = false);
-      Navigator.of(context).pushReplacementNamed('/main'); // Replace with actual route to main screen
+      Navigator.of(context).pushReplacementNamed(
+          '/main'); // Replace with actual route to main screen
     }
   }
 
@@ -89,7 +92,14 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _emailController,
@@ -98,8 +108,9 @@ class _LoginPageState extends State<LoginPage> {
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                value != null && value.contains('@') ? null : 'Enter a valid email',
+                validator: (value) => value != null && value.contains('@')
+                    ? null
+                    : 'Enter a valid email',
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -110,20 +121,21 @@ class _LoginPageState extends State<LoginPage> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (value) =>
-                value != null && value.length >= 6 ? null : 'Minimum 6 characters',
+                validator: (value) => value != null && value.length >= 6
+                    ? null
+                    : 'Minimum 6 characters',
               ),
               const SizedBox(height: 24),
               _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _login();
-                  }
-                },
-                child: const Text('Login'),
-              ),
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _login();
+                        }
+                      },
+                      child: const Text('Login'),
+                    ),
               // Button for guest mode login
               TextButton(
                 onPressed: _loginAsGuest,

@@ -224,7 +224,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   onPressed: () async {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.clear();
+                    await prefs.setString('language', 'kk');
+                    await prefs.setString('theme', 'system');
                     await FirebaseAuth.instance.signOut();
+
+                    settingsController.updateLocale(const Locale('kk'));
+                    settingsController.updateTheme(ThemeMode.system);
+
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
                         builder: (_) => AuthGate(
