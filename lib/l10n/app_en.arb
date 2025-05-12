@@ -8,6 +8,7 @@
   "language": "Language",
   "theme": "Theme",
   "logout": "Log out",
+  "login": "Login",
 
   "newGame": "New Game",
   "leaderboard": "Leaderboard",

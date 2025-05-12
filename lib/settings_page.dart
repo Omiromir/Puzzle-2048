@@ -3,7 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:game_2048/login_page.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'main.dart';
 
 class SettingsPage extends StatefulWidget {
   final void Function(Locale) setLocale;
@@ -39,67 +42,79 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadUserSettings();
   }
 
-  // Load user settings from Firestore
   Future<void> _loadUserSettings() async {
     FirebaseAuth auth = FirebaseAuth.instance;
     User? user = auth.currentUser;
 
     if (user != null) {
-      // Fetch settings from Firestore
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (doc.exists) {
         final data = doc.data();
         if (data != null) {
-          // Apply saved language and theme if available
+          final String lang = data['languageCode'] ?? widget.currentLocale.languageCode;
+          final String themeStr = data['themeMode'] ?? 'system';
+
+          final ThemeMode theme = switch (themeStr) {
+            'dark' => ThemeMode.dark,
+            'light' => ThemeMode.light,
+            'system' => ThemeMode.system,
+            _ => widget.currentThemeMode,
+          };
+
           setState(() {
-            _selectedLanguage = data['languageCode'] ?? widget.currentLocale.languageCode;
-            _selectedTheme = data['themeMode'] == 'dark' ? ThemeMode.dark : ThemeMode.light;
+            _selectedLanguage = lang;
+            _selectedTheme = theme;
           });
-          widget.setLocale(Locale(_selectedLanguage));  // Update locale
-          widget.setThemeMode(_selectedTheme);  // Update theme
+
+          // Schedule updates after build
+          Future.microtask(() {
+            widget.setLocale(Locale(lang));
+            widget.setThemeMode(theme);
+          });
         }
       }
     }
   }
 
-  // Save the settings to Firestore
-  void _saveSettingsToFirestore() async {
+  Future<void> _saveSettingsToFirestore() async {
     FirebaseAuth auth = FirebaseAuth.instance;
     User? user = auth.currentUser;
 
     if (user != null) {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'languageCode': _selectedLanguage,
-        'themeMode': _selectedTheme == ThemeMode.dark ? 'dark' : 'light',
+        'themeMode': switch (_selectedTheme) {
+          ThemeMode.dark => 'dark',
+          ThemeMode.light => 'light',
+          ThemeMode.system => 'system',
+        },
       }, SetOptions(merge: true));
     }
   }
 
-  // Language change handler
   void _onLanguageChanged(String? newLang) {
     if (newLang == null || _selectedLanguage == newLang) return;
     setState(() {
       _selectedLanguage = newLang;
     });
-    widget.setLocale(Locale(newLang));  // Update locale
-    _saveSettingsToFirestore();  // Save language setting
+    widget.setLocale(Locale(newLang));
+    _saveSettingsToFirestore();
   }
 
-  // Theme change handler
   void _onThemeChanged(ThemeMode? newTheme) {
     if (newTheme == null || _selectedTheme == newTheme) return;
     setState(() {
       _selectedTheme = newTheme;
     });
-    widget.setThemeMode(newTheme);  // Update theme mode
-    _saveSettingsToFirestore();  // Save theme setting
+    widget.setThemeMode(newTheme);
+    _saveSettingsToFirestore();
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-
-    bool isGuest = widget.userEmail == null;
+    final settingsController = Provider.of<SettingsController>(context, listen: false);
+    final isGuest = widget.userEmail == null;
 
     return Scaffold(
       appBar: AppBar(title: Text(t.settings)),
@@ -109,7 +124,6 @@ class _SettingsPageState extends State<SettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (isGuest) ...[
-              // Guest Mode UI
               Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -122,23 +136,31 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     const Icon(Icons.info_outline, color: Colors.orange),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(t.guestModeMessage)),
+                    Expanded(
+                      child: Text(
+                        t.guestModeMessage,
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                    ),
+
                   ],
                 ),
               ),
               const SizedBox(height: 32),
-              // Login Button for Guests
               Center(
                 child: ElevatedButton.icon(
-                  onPressed: () async {
-                    // Navigate to LoginPage when the button is pressed
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginPage(onSwitchToRegister: () { })),
+                  onPressed: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => AuthGate(
+                          setLocale: settingsController.updateLocale,
+                          setThemeMode: settingsController.updateTheme,
+                        ),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.login),
-                  label: Text("Login"),
+                  label: Text(t.login),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     foregroundColor: Colors.white,
@@ -151,8 +173,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ] else ...[
-              // Logged-in user settings
-              Text("Email: ${widget.userEmail}", style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500)),
+              Text(
+                "Email: ${widget.userEmail}",
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 24),
               Card(
                 elevation: 2,
@@ -195,13 +219,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 32),
-              // Logout button
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                    final prefs = await SharedPreferences.getInstance();
                     await prefs.clear();
                     await FirebaseAuth.instance.signOut();
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => AuthGate(
+                          setLocale: settingsController.updateLocale,
+                          setThemeMode: settingsController.updateTheme,
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.logout),
                   label: Text(t.logout),
