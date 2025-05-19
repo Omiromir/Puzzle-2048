@@ -2,8 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
-// Assuming these are implemented elsewhere
 import 'game/tile.dart';
 import 'game/grid_properties.dart';
 
@@ -13,8 +11,7 @@ class GameState {
   final List<List<Tile>> _previousGrid;
   final SwipeDirection swipe;
 
-  GameState(List<List<Tile>> previousGrid, this.swipe)
-      : _previousGrid = previousGrid;
+  GameState(List<List<Tile>> previousGrid, this.swipe) : _previousGrid = previousGrid;
 
   List<List<Tile>> get previousGrid =>
       _previousGrid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
@@ -27,9 +24,7 @@ class NewGamePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(t.newGame), // Assuming you have `newGame` in your ARB file
-      ),
+      appBar: AppBar(title: Text(t.newGame)),
       body: Center(
         child: ElevatedButton(
           onPressed: () {
@@ -38,7 +33,7 @@ class NewGamePage extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const GamePage()),
             );
           },
-          child: Text("Start Game"), // Assuming you have `startGame` in your ARB
+          child: Text(t.startGame),
         ),
       ),
     );
@@ -59,6 +54,8 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
   List<GameState> gameStates = [];
   List<Tile> toAdd = [];
 
+  int score = 0;
+
   Iterable<Tile> get gridTiles => grid.expand((e) => e);
   Iterable<Tile> get allTiles => [gridTiles, toAdd].expand((e) => e);
   List<List<Tile>> get gridCols => List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
@@ -66,7 +63,6 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-
     controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -81,7 +77,6 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
         });
       }
     });
-
     _setupNewGame();
   }
 
@@ -94,6 +89,7 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
   void _setupNewGame() {
     setState(() {
       gameStates.clear();
+      score = 0;
       for (var t in gridTiles) {
         t.value = 0;
         t.resetAnimations();
@@ -106,6 +102,7 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
 
   void _addNewTiles(List<int> values) {
     List<Tile> empty = gridTiles.where((t) => t.value == 0).toList();
+    if (empty.length < values.length) return;
     empty.shuffle();
     for (int i = 0; i < values.length; i++) {
       toAdd.add(Tile(empty[i].x, empty[i].y, values[i])..appear(controller));
@@ -137,36 +134,74 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
         gameStates.add(GameState(gridBeforeSwipe, direction));
         _addNewTiles([2]);
         controller.forward(from: 0);
+        if (!_hasValidMoves()) {
+          _showGameOverDialog();
+        }
       }
     });
   }
 
-  bool _mergeLeft() => grid.map(_mergeTiles).toList().any((e) => e);
+  bool _hasValidMoves() {
+    return gridTiles.any((t) => t.value == 0) ||
+        _canMerge(grid) || _canMerge(gridCols);
+  }
+
+  bool _canMerge(List<List<Tile>> rows) {
+    for (var row in rows) {
+      for (int i = 0; i < row.length - 1; i++) {
+        if (row[i].value == row[i + 1].value) return true;
+      }
+    }
+    return false;
+  }
+
+  bool _mergeLeft() {
+    bool changed = false;
+    for (int y = 0; y < 4; y++) {
+      List<Tile> row = grid[y];
+      bool rowChanged = _mergeTiles(row);
+      if (rowChanged) changed = true;
+    }
+    return changed;
+  }
+
   bool _mergeRight() {
     bool changed = false;
     for (int y = 0; y < 4; y++) {
       List<Tile> row = grid[y].reversed.toList();
       bool rowChanged = _mergeTiles(row);
       if (rowChanged) changed = true;
-      grid[y] = row.reversed.toList(); // Reassign the modified row back
+      grid[y] = row.reversed.toList();
     }
     return changed;
   }
-  bool _mergeUp() => gridCols.map(_mergeTiles).toList().any((e) => e);
-  bool _mergeDown() {
-  bool changed = false;
-  for (int x = 0; x < 4; x++) {
-    List<Tile> col = List.generate(4, (y) => grid[y][x]).reversed.toList();
-    bool colChanged = _mergeTiles(col);
-    if (colChanged) changed = true;
-    List<Tile> fixed = col.reversed.toList();
-    for (int y = 0; y < 4; y++) {
-      grid[y][x] = fixed[y];
-    }
-  }
-  return changed;
-}
 
+  bool _mergeUp() {
+    bool changed = false;
+    for (int x = 0; x < 4; x++) {
+      List<Tile> col = List.generate(4, (y) => grid[y][x]);
+      bool colChanged = _mergeTiles(col);
+      if (colChanged) changed = true;
+      for (int y = 0; y < 4; y++) {
+        grid[y][x] = col[y];
+      }
+    }
+    return changed;
+  }
+
+  bool _mergeDown() {
+    bool changed = false;
+    for (int x = 0; x < 4; x++) {
+      List<Tile> col = List.generate(4, (y) => grid[y][x]).reversed.toList();
+      bool colChanged = _mergeTiles(col);
+      if (colChanged) changed = true;
+      List<Tile> fixed = col.reversed.toList();
+      for (int y = 0; y < 4; y++) {
+        grid[y][x] = fixed[y];
+      }
+    }
+    return changed;
+  }
 
   bool _mergeTiles(List<Tile> tiles) {
     bool didChange = false;
@@ -188,6 +223,7 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
             tiles[j].moveTo(controller, tiles[i].x, tiles[i].y);
             if (mergeTile != null) {
               resultValue += mergeTile.value;
+              score += resultValue;
               mergeTile.moveTo(controller, tiles[i].x, tiles[i].y);
               mergeTile.bounce(controller);
               mergeTile.changeNumber(controller, resultValue);
@@ -207,7 +243,6 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
   void _undoMove() {
     if (gameStates.isEmpty) return;
     GameState previousState = gameStates.removeLast();
-
     bool Function() mergeFn;
     switch (previousState.swipe) {
       case SwipeDirection.up:
@@ -223,7 +258,6 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
         mergeFn = _mergeRight;
         break;
     }
-
     setState(() {
       grid = previousState.previousGrid;
       mergeFn();
@@ -238,8 +272,29 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
     });
   }
 
+  void _showGameOverDialog() {
+    final t = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(t.gameOver),
+        content: Text("${t.finalScore}: $score"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _setupNewGame();
+            },
+            child: Text(t.restart),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     double padding = 16;
     double border = 4;
     double gridSize = MediaQuery.of(context).size.width - padding * 2;
@@ -271,13 +326,13 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
     return Scaffold(
       backgroundColor: tan,
       appBar: AppBar(
-        title: const Text('2048'),
+        title: Text("2048 - ${t.score(score)}"),
         leading: IconButton(
           icon: const Icon(Icons.home),
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const NewGamePage()),
+              MaterialPageRoute(builder: (_) => const NewGamePage()),
             );
           },
         ),
@@ -304,9 +359,9 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
               ),
             ),
             const SizedBox(height: 20),
-            BigButton(label: "Undo", color: numColor, onPressed: _undoMove),
+            BigButton(label: t.undo, color: numColor, onPressed: _undoMove),
             const SizedBox(height: 12),
-            BigButton(label: "Restart", color: orange, onPressed: _setupNewGame),
+            BigButton(label: t.restart, color: orange, onPressed: _setupNewGame),
           ],
         ),
       ),

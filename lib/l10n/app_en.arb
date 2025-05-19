@@ -16,6 +16,12 @@
   "howToPlay": "How to Play",
   "aboutText": "Swipe to move tiles.\nCombine same numbers.\nReach 2048 to win!\nGood luck!",
   "credits": "Developed by Moiseychenko Nikita and Abishev Beibarys.\nMentor: Abzal Kyzyrkanov",
-  "guestModeMessage": "You are in Guest Mode. Some features are disabled."
+  "guestModeMessage": "You are in Guest Mode. Some features are disabled.",
 
+  "startGame": "Start Game",
+  "undo": "Undo",
+  "restart": "Restart",
+  "gameOver": "Game Over",
+  "finalScore": "Final Score",
+  "score": "Score: {score}"
 }

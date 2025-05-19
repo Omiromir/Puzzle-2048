@@ -83,7 +83,7 @@ class HomePage extends StatelessWidget {
                             List<VoidCallback> actions = [
                               () => Navigator.pushReplacement(
                                     context,
-                                    MaterialPageRoute(builder: (_) => const NewGamePage()),
+                                    MaterialPageRoute(builder: (_) => const GamePage()),
                                   ),
                               () => Navigator.push(
                                     context,
