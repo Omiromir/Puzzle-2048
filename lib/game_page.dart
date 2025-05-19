@@ -11,10 +11,12 @@ class GameState {
   final List<List<Tile>> _previousGrid;
   final SwipeDirection swipe;
 
-  GameState(List<List<Tile>> previousGrid, this.swipe) : _previousGrid = previousGrid;
+  GameState(List<List<Tile>> previousGrid, this.swipe)
+      : _previousGrid = previousGrid;
 
-  List<List<Tile>> get previousGrid =>
-      _previousGrid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
+  List<List<Tile>> get previousGrid => _previousGrid
+      .map((row) => row.map((tile) => tile.copy()).toList())
+      .toList();
 }
 
 class NewGamePage extends StatelessWidget {
@@ -47,10 +49,12 @@ class GamePage extends StatefulWidget {
   State<GamePage> createState() => _GamePageState();
 }
 
-class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin {
+class _GamePageState extends State<GamePage>
+    with SingleTickerProviderStateMixin {
   late AnimationController controller;
 
-  List<List<Tile>> grid = List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
+  List<List<Tile>> grid =
+      List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
   List<GameState> gameStates = [];
   List<Tile> toAdd = [];
 
@@ -58,12 +62,14 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
 
   Iterable<Tile> get gridTiles => grid.expand((e) => e);
   Iterable<Tile> get allTiles => [gridTiles, toAdd].expand((e) => e);
-  List<List<Tile>> get gridCols => List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
+  List<List<Tile>> get gridCols =>
+      List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
 
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    controller = AnimationController(
+        duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
@@ -143,7 +149,8 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
 
   bool _hasValidMoves() {
     return gridTiles.any((t) => t.value == 0) ||
-        _canMerge(grid) || _canMerge(gridCols);
+        _canMerge(grid) ||
+        _canMerge(gridCols);
   }
 
   bool _canMerge(List<List<Tile>> rows) {
@@ -209,9 +216,9 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
       for (int j = i; j < tiles.length; j++) {
         if (tiles[j].value != 0) {
           Tile? mergeTile = tiles.skip(j + 1).firstWhere(
-            (t) => t.value != 0,
-            orElse: () => Tile(-1, -1, 0),
-          );
+                (t) => t.value != 0,
+                orElse: () => Tile(-1, -1, 0),
+              );
 
           if (mergeTile.x == -1 || mergeTile.value != tiles[j].value) {
             mergeTile = null;
@@ -330,10 +337,7 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
         leading: IconButton(
           icon: const Icon(Icons.home),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const NewGamePage()),
-            );
+            Navigator.of(context).pushReplacementNamed('/main');
           },
         ),
       ),
@@ -361,7 +365,8 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
             const SizedBox(height: 20),
             BigButton(label: t.undo, color: numColor, onPressed: _undoMove),
             const SizedBox(height: 12),
-            BigButton(label: t.restart, color: orange, onPressed: _setupNewGame),
+            BigButton(
+                label: t.restart, color: orange, onPressed: _setupNewGame),
           ],
         ),
       ),
