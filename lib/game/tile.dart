@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'grid_properties.dart';
 
 class Tile {
@@ -62,20 +63,20 @@ class TileWidget extends StatelessWidget {
   final Widget? child;
 
   const TileWidget({
-    Key? key,
+    super.key,
     required this.x,
     required this.y,
     required this.containerSize,
     required this.size,
     required this.color,
     this.child,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) => Positioned(
         left: x,
         top: y,
-        child: Container(
+        child: SizedBox(
           width: containerSize,
           height: containerSize,
           child: Center(
@@ -96,7 +97,7 @@ class TileWidget extends StatelessWidget {
 class TileNumber extends StatelessWidget {
   final int val;
 
-  const TileNumber(this.val, {Key? key}) : super(key: key);
+  const TileNumber(this.val, {super.key});
 
   @override
   Widget build(BuildContext context) => Text(
@@ -114,7 +115,7 @@ class BigButton extends StatelessWidget {
   final Color color;
   final void Function()? onPressed;
 
-  const BigButton({Key? key, required this.label, required this.color, this.onPressed}) : super(key: key);
+  const BigButton({super.key, required this.label, required this.color, this.onPressed});
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -144,17 +145,18 @@ class Swiper extends StatelessWidget {
   final Widget child;
 
   const Swiper({
-    Key? key,
+    super.key,
     required this.up,
     required this.down,
     required this.left,
     required this.right,
     required this.child,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) => GestureDetector(
         onVerticalDragEnd: (details) {
+          HapticFeedback.mediumImpact();
           if (details.velocity.pixelsPerSecond.dy < -250) {
             up();
           } else if (details.velocity.pixelsPerSecond.dy > 250) {
@@ -162,9 +164,10 @@ class Swiper extends StatelessWidget {
           }
         },
         onHorizontalDragEnd: (details) {
-          if (details.velocity.pixelsPerSecond.dx < -1000) {
+          HapticFeedback.mediumImpact();
+          if (details.velocity.pixelsPerSecond.dx < -250) {
             left();
-          } else if (details.velocity.pixelsPerSecond.dx > 1000) {
+          } else if (details.velocity.pixelsPerSecond.dx > 250) {
             right();
           }
         },

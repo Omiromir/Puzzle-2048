@@ -1,9 +1,12 @@
 // ignore: unused_import
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'game/tile.dart';
 import 'game/grid_properties.dart';
+import 'package:intl/intl.dart';
+
 
 enum SwipeDirection { up, down, left, right }
 
@@ -52,6 +55,7 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage>
     with SingleTickerProviderStateMixin {
   late AnimationController controller;
+  bool _isAnimating = false;
 
   List<List<Tile>> grid =
       List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
@@ -80,7 +84,12 @@ class _GamePageState extends State<GamePage>
             t.resetAnimations();
           }
           toAdd.clear();
+          _isAnimating = false;
         });
+
+        if (!_hasValidMoves()) {
+          _showGameOverDialog();
+        }
       }
     });
     _setupNewGame();
@@ -116,6 +125,8 @@ class _GamePageState extends State<GamePage>
   }
 
   void _merge(SwipeDirection direction) {
+    if (_isAnimating) return; // Prevent multiple swipes at once
+
     bool Function() mergeFn;
     switch (direction) {
       case SwipeDirection.up:
@@ -133,19 +144,24 @@ class _GamePageState extends State<GamePage>
     }
 
     List<List<Tile>> gridBeforeSwipe =
-        grid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
+    grid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
+
+    bool didMove = false;
 
     setState(() {
-      if (mergeFn()) {
+      didMove = mergeFn();
+      if (didMove) {
+        _isAnimating = true;
         gameStates.add(GameState(gridBeforeSwipe, direction));
         _addNewTiles([2]);
         controller.forward(from: 0);
-        if (!_hasValidMoves()) {
-          _showGameOverDialog();
-        }
       }
     });
+
+    // If no move was made, don’t animate and don’t lock
+    if (!didMove) return;
   }
+
 
   bool _hasValidMoves() {
     return gridTiles.any((t) => t.value == 0) ||
@@ -164,6 +180,7 @@ class _GamePageState extends State<GamePage>
 
   bool _mergeLeft() {
     bool changed = false;
+    if (_isAnimating) return changed;
     for (int y = 0; y < 4; y++) {
       List<Tile> row = grid[y];
       bool rowChanged = _mergeTiles(row);
@@ -174,6 +191,7 @@ class _GamePageState extends State<GamePage>
 
   bool _mergeRight() {
     bool changed = false;
+    if (_isAnimating) return changed;
     for (int y = 0; y < 4; y++) {
       List<Tile> row = grid[y].reversed.toList();
       bool rowChanged = _mergeTiles(row);
@@ -185,6 +203,7 @@ class _GamePageState extends State<GamePage>
 
   bool _mergeUp() {
     bool changed = false;
+    if (_isAnimating) return changed;
     for (int x = 0; x < 4; x++) {
       List<Tile> col = List.generate(4, (y) => grid[y][x]);
       bool colChanged = _mergeTiles(col);
@@ -198,6 +217,7 @@ class _GamePageState extends State<GamePage>
 
   bool _mergeDown() {
     bool changed = false;
+    if (_isAnimating) return changed;
     for (int x = 0; x < 4; x++) {
       List<Tile> col = List.generate(4, (y) => grid[y][x]).reversed.toList();
       bool colChanged = _mergeTiles(col);
@@ -248,36 +268,18 @@ class _GamePageState extends State<GamePage>
   }
 
   void _undoMove() {
-    if (gameStates.isEmpty) return;
+    if (_isAnimating || gameStates.isEmpty) return;
     GameState previousState = gameStates.removeLast();
-    bool Function() mergeFn;
-    switch (previousState.swipe) {
-      case SwipeDirection.up:
-        mergeFn = _mergeUp;
-        break;
-      case SwipeDirection.down:
-        mergeFn = _mergeDown;
-        break;
-      case SwipeDirection.left:
-        mergeFn = _mergeLeft;
-        break;
-      case SwipeDirection.right:
-        mergeFn = _mergeRight;
-        break;
-    }
     setState(() {
       grid = previousState.previousGrid;
-      mergeFn();
-      controller.reverse(from: .99).then((_) {
-        setState(() {
-          grid = previousState.previousGrid;
-          for (var t in gridTiles) {
-            t.resetAnimations();
-          }
-        });
-      });
+      toAdd.clear();
+      controller.forward(from: 0);
+      for (var t in gridTiles) {
+        t.resetAnimations();
+      }
     });
   }
+
 
   void _showGameOverDialog() {
     final t = AppLocalizations.of(context)!;
@@ -333,7 +335,7 @@ class _GamePageState extends State<GamePage>
     return Scaffold(
       backgroundColor: tan,
       appBar: AppBar(
-        title: Text("2048 - ${t.score(score)}"),
+        title: Text("2048 - ${t.score(NumberFormat.decimalPattern().format(score))}"),
         leading: IconButton(
           icon: const Icon(Icons.home),
           onPressed: () {
