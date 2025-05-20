@@ -1,4 +1,3 @@
-// ignore: unused_import
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +5,6 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'game/tile.dart';
 import 'game/grid_properties.dart';
 import 'package:intl/intl.dart';
-
 
 enum SwipeDirection { up, down, left, right }
 
@@ -17,32 +15,8 @@ class GameState {
   GameState(List<List<Tile>> previousGrid, this.swipe)
       : _previousGrid = previousGrid;
 
-  List<List<Tile>> get previousGrid => _previousGrid
-      .map((row) => row.map((tile) => tile.copy()).toList())
-      .toList();
-}
-
-class NewGamePage extends StatelessWidget {
-  const NewGamePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(title: Text(t.newGame)),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const GamePage()),
-            );
-          },
-          child: Text(t.startGame),
-        ),
-      ),
-    );
-  }
+  List<List<Tile>> get previousGrid =>
+      _previousGrid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
 }
 
 class GamePage extends StatefulWidget {
@@ -52,28 +26,25 @@ class GamePage extends StatefulWidget {
   State<GamePage> createState() => _GamePageState();
 }
 
-class _GamePageState extends State<GamePage>
-    with SingleTickerProviderStateMixin {
+class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin {
   late AnimationController controller;
   bool _isAnimating = false;
 
-  List<List<Tile>> grid =
-      List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
+  List<List<Tile>> grid = List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
   List<GameState> gameStates = [];
   List<Tile> toAdd = [];
 
   int score = 0;
+  int bestScore = 0;
 
   Iterable<Tile> get gridTiles => grid.expand((e) => e);
   Iterable<Tile> get allTiles => [gridTiles, toAdd].expand((e) => e);
-  List<List<Tile>> get gridCols =>
-      List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
+  List<List<Tile>> get gridCols => List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
 
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(
-        duration: const Duration(milliseconds: 200), vsync: this);
+    controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
@@ -104,6 +75,7 @@ class _GamePageState extends State<GamePage>
   void _setupNewGame() {
     setState(() {
       gameStates.clear();
+      if (score > bestScore) bestScore = score;
       score = 0;
       for (var t in gridTiles) {
         t.value = 0;
@@ -125,43 +97,29 @@ class _GamePageState extends State<GamePage>
   }
 
   void _merge(SwipeDirection direction) {
-    if (_isAnimating) return; // Prevent multiple swipes at once
+    if (_isAnimating) return;
 
     bool Function() mergeFn;
     switch (direction) {
-      case SwipeDirection.up:
-        mergeFn = _mergeUp;
-        break;
-      case SwipeDirection.down:
-        mergeFn = _mergeDown;
-        break;
-      case SwipeDirection.left:
-        mergeFn = _mergeLeft;
-        break;
-      case SwipeDirection.right:
-        mergeFn = _mergeRight;
-        break;
+      case SwipeDirection.up: mergeFn = _mergeUp; break;
+      case SwipeDirection.down: mergeFn = _mergeDown; break;
+      case SwipeDirection.left: mergeFn = _mergeLeft; break;
+      case SwipeDirection.right: mergeFn = _mergeRight; break;
     }
 
     List<List<Tile>> gridBeforeSwipe =
-    grid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
+        grid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
 
-    bool didMove = false;
-
-    setState(() {
-      didMove = mergeFn();
-      if (didMove) {
+    bool didMove = mergeFn();
+    if (didMove) {
+      setState(() {
         _isAnimating = true;
         gameStates.add(GameState(gridBeforeSwipe, direction));
         _addNewTiles([2]);
         controller.forward(from: 0);
-      }
-    });
-
-    // If no move was made, don’t animate and don’t lock
-    if (!didMove) return;
+      });
+    }
   }
-
 
   bool _hasValidMoves() {
     return gridTiles.any((t) => t.value == 0) ||
@@ -178,67 +136,15 @@ class _GamePageState extends State<GamePage>
     return false;
   }
 
-  bool _mergeLeft() {
-    bool changed = false;
-    if (_isAnimating) return changed;
-    for (int y = 0; y < 4; y++) {
-      List<Tile> row = grid[y];
-      bool rowChanged = _mergeTiles(row);
-      if (rowChanged) changed = true;
-    }
-    return changed;
-  }
-
-  bool _mergeRight() {
-    bool changed = false;
-    if (_isAnimating) return changed;
-    for (int y = 0; y < 4; y++) {
-      List<Tile> row = grid[y].reversed.toList();
-      bool rowChanged = _mergeTiles(row);
-      if (rowChanged) changed = true;
-      grid[y] = row.reversed.toList();
-    }
-    return changed;
-  }
-
-  bool _mergeUp() {
-    bool changed = false;
-    if (_isAnimating) return changed;
-    for (int x = 0; x < 4; x++) {
-      List<Tile> col = List.generate(4, (y) => grid[y][x]);
-      bool colChanged = _mergeTiles(col);
-      if (colChanged) changed = true;
-      for (int y = 0; y < 4; y++) {
-        grid[y][x] = col[y];
-      }
-    }
-    return changed;
-  }
-
-  bool _mergeDown() {
-    bool changed = false;
-    if (_isAnimating) return changed;
-    for (int x = 0; x < 4; x++) {
-      List<Tile> col = List.generate(4, (y) => grid[y][x]).reversed.toList();
-      bool colChanged = _mergeTiles(col);
-      if (colChanged) changed = true;
-      List<Tile> fixed = col.reversed.toList();
-      for (int y = 0; y < 4; y++) {
-        grid[y][x] = fixed[y];
-      }
-    }
-    return changed;
-  }
-
   bool _mergeTiles(List<Tile> tiles) {
     bool didChange = false;
     for (int i = 0; i < tiles.length; i++) {
       for (int j = i; j < tiles.length; j++) {
         if (tiles[j].value != 0) {
           Tile? mergeTile = tiles.skip(j + 1).firstWhere(
-                (t) => t.value != 0,
-                orElse: () => Tile(-1, -1, 0),
-              );
+            (t) => t.value != 0,
+            orElse: () => Tile(-1, -1, 0),
+          );
 
           if (mergeTile.x == -1 || mergeTile.value != tiles[j].value) {
             mergeTile = null;
@@ -267,6 +173,49 @@ class _GamePageState extends State<GamePage>
     return didChange;
   }
 
+  bool _mergeLeft() {
+    bool changed = false;
+    for (int y = 0; y < 4; y++) {
+      if (_mergeTiles(grid[y])) changed = true;
+    }
+    return changed;
+  }
+
+  bool _mergeRight() {
+    bool changed = false;
+    for (int y = 0; y < 4; y++) {
+      List<Tile> row = grid[y].reversed.toList();
+      if (_mergeTiles(row)) changed = true;
+      grid[y] = row.reversed.toList();
+    }
+    return changed;
+  }
+
+  bool _mergeUp() {
+    bool changed = false;
+    for (int x = 0; x < 4; x++) {
+      List<Tile> col = List.generate(4, (y) => grid[y][x]);
+      if (_mergeTiles(col)) changed = true;
+      for (int y = 0; y < 4; y++) {
+        grid[y][x] = col[y];
+      }
+    }
+    return changed;
+  }
+
+  bool _mergeDown() {
+    bool changed = false;
+    for (int x = 0; x < 4; x++) {
+      List<Tile> col = List.generate(4, (y) => grid[y][x]).reversed.toList();
+      if (_mergeTiles(col)) changed = true;
+      List<Tile> fixed = col.reversed.toList();
+      for (int y = 0; y < 4; y++) {
+        grid[y][x] = fixed[y];
+      }
+    }
+    return changed;
+  }
+
   void _undoMove() {
     if (_isAnimating || gameStates.isEmpty) return;
     GameState previousState = gameStates.removeLast();
@@ -279,7 +228,6 @@ class _GamePageState extends State<GamePage>
       }
     });
   }
-
 
   void _showGameOverDialog() {
     final t = AppLocalizations.of(context)!;
@@ -296,6 +244,23 @@ class _GamePageState extends State<GamePage>
             },
             child: Text(t.restart),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreBox(String label, int value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.brown[300],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(label.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.white)),
+          Text('$value', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         ],
       ),
     );
@@ -334,43 +299,81 @@ class _GamePageState extends State<GamePage>
 
     return Scaffold(
       backgroundColor: tan,
-      appBar: AppBar(
-        title: Text("2048 - ${t.score(NumberFormat.decimalPattern().format(score))}"),
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () {
-            Navigator.of(context).pushReplacementNamed('/main');
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: EdgeInsets.all(padding),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 10),
+                      Text(
+                        "2048",
+                        style: TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown[800],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildScoreBox(t.scoreLabel, score),
+                          _buildScoreBox(t.bestLabel, bestScore),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _iconButton(Icons.undo, _undoMove),
+                          const SizedBox(width: 8),
+                          _iconButton(Icons.refresh, _setupNewGame),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Swiper(
+                        up: () => _merge(SwipeDirection.up),
+                        down: () => _merge(SwipeDirection.down),
+                        left: () => _merge(SwipeDirection.left),
+                        right: () => _merge(SwipeDirection.right),
+                        child: Container(
+                          height: gridSize,
+                          width: gridSize,
+                          padding: EdgeInsets.all(border),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(cornerRadius),
+                            color: darkBrown,
+                          ),
+                          child: Stack(children: stackItems),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           },
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(padding),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Swiper(
-              up: () => _merge(SwipeDirection.up),
-              down: () => _merge(SwipeDirection.down),
-              left: () => _merge(SwipeDirection.left),
-              right: () => _merge(SwipeDirection.right),
-              child: Container(
-                height: gridSize,
-                width: gridSize,
-                padding: EdgeInsets.all(border),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(cornerRadius),
-                  color: darkBrown,
-                ),
-                child: Stack(children: stackItems),
-              ),
-            ),
-            const SizedBox(height: 20),
-            BigButton(label: t.undo, color: numColor, onPressed: _undoMove),
-            const SizedBox(height: 12),
-            BigButton(
-                label: t.restart, color: orange, onPressed: _setupNewGame),
-          ],
-        ),
+    );
+  }
+
+  Widget _iconButton(IconData icon, VoidCallback onPressed) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.brown[300],
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white),
+        onPressed: onPressed,
       ),
     );
   }

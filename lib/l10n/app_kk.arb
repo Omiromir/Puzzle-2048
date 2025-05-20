@@ -24,6 +24,8 @@
   "restart": "Қайта бастау",
   "gameOver": "Ойын аяқталды",
   "finalScore": "Қорытынды ұпай",
-  "score": "Ұпай: {score}"
+  "score": "Ұпай: {score}",
+  "scoreLabel": "Ұпай",
+  "bestLabel": "Үздік"
 
 }

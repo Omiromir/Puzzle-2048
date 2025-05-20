@@ -54,7 +54,7 @@ class HomePage extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () {
                             Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const NewGamePage()));
+                                MaterialPageRoute(builder: (_) => const GamePage()));
                           },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),

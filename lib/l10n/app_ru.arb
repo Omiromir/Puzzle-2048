@@ -23,6 +23,8 @@
   "restart": "Перезапуск",
   "gameOver": "Игра окончена",
   "finalScore": "Итоговый счёт",
-  "score": "Счёт: {score}"
+  "score": "Счёт: {score}",
+  "scoreLabel": "Очки",
+  "bestLabel": "Рекорд"
 
 }

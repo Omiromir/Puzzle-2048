@@ -23,5 +23,8 @@
   "restart": "Restart",
   "gameOver": "Game Over",
   "finalScore": "Final Score",
-  "score": "Score: {score}"
+  "score": "Score: {score}",
+  "scoreLabel": "Очки",
+  "bestLabel": "Рекорд"
+  
 }
