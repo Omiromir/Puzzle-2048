@@ -24,7 +24,9 @@
   "gameOver": "Game Over",
   "finalScore": "Final Score",
   "score": "Score: {score}",
-  "scoreLabel": "Очки",
-  "bestLabel": "Рекорд"
+  "scoreLabel": "Score",
+  "name": "Name",
+  "bestLabel": "Record"
+
   
 }

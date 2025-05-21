@@ -25,6 +25,8 @@
   "finalScore": "Итоговый счёт",
   "score": "Счёт: {score}",
   "scoreLabel": "Очки",
-  "bestLabel": "Рекорд"
+  "bestLabel": "Рекорд",
+  "name": "Имя"
+
 
 }

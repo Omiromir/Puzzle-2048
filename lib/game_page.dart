@@ -9,8 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
-
 enum SwipeDirection { up, down, left, right }
 
 class GameState {
@@ -104,9 +102,14 @@ class _GamePageState extends State<GamePage>
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       final firebaseBest = doc.data()?['bestScore'] ?? 0;
-      final maxScore = (firebaseBest is int && firebaseBest > localBest) ? firebaseBest : localBest;
+      final maxScore = (firebaseBest is int && firebaseBest > localBest)
+          ? firebaseBest
+          : localBest;
 
       setState(() {
         bestScore = maxScore;
@@ -118,7 +121,6 @@ class _GamePageState extends State<GamePage>
       });
     }
   }
-
 
   Future<void> _saveBestScore(int score) async {
     final prefs = await SharedPreferences.getInstance();
@@ -282,26 +284,25 @@ class _GamePageState extends State<GamePage>
       setState(() {
         bestScore = score;
       });
-      await _saveBestScore(score);      // Save locally
-      await _uploadBestScoreToFirebase(score);  // Save remotely
+      await _saveBestScore(score); // Save locally
+      await _uploadBestScoreToFirebase(score); // Save remotely
     }
-    if(mounted) {
+    if (mounted) {
       await showDialog(
         context: context,
-        builder: (_) =>
-            AlertDialog(
-              title: Text(t.gameOver),
-              content: Text("${t.finalScore}: $score"),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    navigator.pop();
-                    _setupNewGame();
-                  },
-                  child: Text(t.restart),
-                ),
-              ],
+        builder: (_) => AlertDialog(
+          title: Text(t.gameOver),
+          content: Text("${t.finalScore}: $score"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                navigator.pop();
+                _setupNewGame();
+              },
+              child: Text(t.restart),
             ),
+          ],
+        ),
       );
     }
   }
@@ -310,7 +311,8 @@ class _GamePageState extends State<GamePage>
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final userDoc =
+        FirebaseFirestore.instance.collection('users').doc(user.uid);
 
     try {
       await userDoc.set({'bestScore': score}, SetOptions(merge: true));
@@ -318,7 +320,6 @@ class _GamePageState extends State<GamePage>
       debugPrint("Failed to upload best score: $e");
     }
   }
-
 
   Widget _buildScoreBox(String label, int value) {
     return Container(
@@ -375,6 +376,40 @@ class _GamePageState extends State<GamePage>
 
     return Scaffold(
       backgroundColor: tan,
+      appBar: AppBar(
+        backgroundColor: tan,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushReplacementNamed('/main');
+          },
+        ),
+        title: Text(
+          "2048",
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.brown[800],
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text(
+                "${t.scoreLabel}: ${NumberFormat.decimalPattern().format(score)}",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.brown,
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -386,7 +421,11 @@ class _GamePageState extends State<GamePage>
             const scoresHeight = 60.0;
             const buttonsHeight = 60.0;
             const spacing = 60.0; // for spacing between rows
-            const totalReservedHeight = topPadding + titleHeight + scoresHeight + buttonsHeight + spacing;
+            const totalReservedHeight = topPadding +
+                titleHeight +
+                scoresHeight +
+                buttonsHeight +
+                spacing;
 
             final availableHeightForGrid = screenHeight - totalReservedHeight;
 
@@ -413,8 +452,10 @@ class _GamePageState extends State<GamePage>
                             y: tileSize * tile.animatedY.value,
                             containerSize: tileSize,
                             size: (tileSize - 8) * tile.size.value,
-                            color: numTileColor[tile.animatedValue.value] ?? tan,
-                            child: Center(child: TileNumber(tile.animatedValue.value)),
+                            color:
+                                numTileColor[tile.animatedValue.value] ?? tan,
+                            child: Center(
+                                child: TileNumber(tile.animatedValue.value)),
                           ),
                   )),
             ];

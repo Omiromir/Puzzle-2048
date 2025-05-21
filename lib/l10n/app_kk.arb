@@ -26,6 +26,7 @@
   "finalScore": "Қорытынды ұпай",
   "score": "Ұпай: {score}",
   "scoreLabel": "Ұпай",
-  "bestLabel": "Үздік"
+  "bestLabel": "Үздік",
+  "name": "Аты"
 
 }
