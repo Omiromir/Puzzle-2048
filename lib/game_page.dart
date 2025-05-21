@@ -20,8 +20,9 @@ class GameState {
   GameState(List<List<Tile>> previousGrid, this.swipe)
       : _previousGrid = previousGrid;
 
-  List<List<Tile>> get previousGrid =>
-      _previousGrid.map((row) => row.map((tile) => tile.copy()).toList()).toList();
+  List<List<Tile>> get previousGrid => _previousGrid
+      .map((row) => row.map((tile) => tile.copy()).toList())
+      .toList();
 }
 
 class GamePage extends StatefulWidget {
@@ -31,11 +32,13 @@ class GamePage extends StatefulWidget {
   State<GamePage> createState() => _GamePageState();
 }
 
-class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin {
+class _GamePageState extends State<GamePage>
+    with SingleTickerProviderStateMixin {
   late AnimationController controller;
   bool _isAnimating = false;
 
-  List<List<Tile>> grid = List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
+  List<List<Tile>> grid =
+      List.generate(4, (y) => List.generate(4, (x) => Tile(x, y, 0)));
   List<GameState> gameStates = [];
   List<Tile> toAdd = [];
 
@@ -44,12 +47,14 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
 
   Iterable<Tile> get gridTiles => grid.expand((e) => e);
   Iterable<Tile> get allTiles => [gridTiles, toAdd].expand((e) => e);
-  List<List<Tile>> get gridCols => List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
+  List<List<Tile>> get gridCols =>
+      List.generate(4, (x) => List.generate(4, (y) => grid[y][x]));
 
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
+    controller = AnimationController(
+        duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
       _loadBestScore();
       if (status == AnimationStatus.completed) {
@@ -134,10 +139,18 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
 
     bool Function() mergeFn;
     switch (direction) {
-      case SwipeDirection.up: mergeFn = _mergeUp; break;
-      case SwipeDirection.down: mergeFn = _mergeDown; break;
-      case SwipeDirection.left: mergeFn = _mergeLeft; break;
-      case SwipeDirection.right: mergeFn = _mergeRight; break;
+      case SwipeDirection.up:
+        mergeFn = _mergeUp;
+        break;
+      case SwipeDirection.down:
+        mergeFn = _mergeDown;
+        break;
+      case SwipeDirection.left:
+        mergeFn = _mergeLeft;
+        break;
+      case SwipeDirection.right:
+        mergeFn = _mergeRight;
+        break;
     }
 
     List<List<Tile>> gridBeforeSwipe =
@@ -175,9 +188,9 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
       for (int j = i; j < tiles.length; j++) {
         if (tiles[j].value != 0) {
           Tile? mergeTile = tiles.skip(j + 1).firstWhere(
-            (t) => t.value != 0,
-            orElse: () => Tile(-1, -1, 0),
-          );
+                (t) => t.value != 0,
+                orElse: () => Tile(-1, -1, 0),
+              );
 
           if (mergeTile.x == -1 || mergeTile.value != tiles[j].value) {
             mergeTile = null;
@@ -317,8 +330,13 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
       ),
       child: Column(
         children: [
-          Text(label.toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.white)),
-          Text('$value', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          Text(label.toUpperCase(),
+              style: const TextStyle(fontSize: 12, color: Colors.white)),
+          Text('$value',
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
         ],
       ),
     );
@@ -360,59 +378,95 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Padding(
-                  padding: EdgeInsets.all(padding),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 10),
-                      Text(
-                        "2048",
-                        style: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.brown[800],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildScoreBox(t.scoreLabel, score),
-                          _buildScoreBox(t.bestLabel, bestScore),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _iconButton(Icons.undo, _undoMove),
-                          const SizedBox(width: 8),
-                          _iconButton(Icons.refresh, _setupNewGame),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Swiper(
-                        up: () => _merge(SwipeDirection.up),
-                        down: () => _merge(SwipeDirection.down),
-                        left: () => _merge(SwipeDirection.left),
-                        right: () => _merge(SwipeDirection.right),
-                        child: Container(
-                          height: gridSize,
-                          width: gridSize,
-                          padding: EdgeInsets.all(border),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(cornerRadius),
-                            color: darkBrown,
+            final screenWidth = constraints.maxWidth;
+            final screenHeight = constraints.maxHeight;
+
+            const topPadding = 10.0;
+            const titleHeight = 60.0;
+            const scoresHeight = 60.0;
+            const buttonsHeight = 60.0;
+            const spacing = 60.0; // for spacing between rows
+            const totalReservedHeight = topPadding + titleHeight + scoresHeight + buttonsHeight + spacing;
+
+            final availableHeightForGrid = screenHeight - totalReservedHeight;
+
+            final gridSize = screenWidth < availableHeightForGrid
+                ? screenWidth - 32 // padding
+                : availableHeightForGrid;
+
+            final tileSize = (gridSize - 8) / 4; // 8 = total border padding
+
+            List<Widget> stackItems = [
+              ...gridTiles.map((t) => TileWidget(
+                    x: tileSize * t.x,
+                    y: tileSize * t.y,
+                    containerSize: tileSize,
+                    size: tileSize - 8,
+                    color: lightBrown,
+                  )),
+              ...allTiles.map((tile) => AnimatedBuilder(
+                    animation: controller,
+                    builder: (context, child) => tile.animatedValue.value == 0
+                        ? const SizedBox()
+                        : TileWidget(
+                            x: tileSize * tile.animatedX.value,
+                            y: tileSize * tile.animatedY.value,
+                            containerSize: tileSize,
+                            size: (tileSize - 8) * tile.size.value,
+                            color: numTileColor[tile.animatedValue.value] ?? tan,
+                            child: Center(child: TileNumber(tile.animatedValue.value)),
                           ),
-                          child: Stack(children: stackItems),
-                        ),
-                      ),
+                  )),
+            ];
+
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const SizedBox(height: topPadding),
+                  Text(
+                    "2048",
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.brown[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildScoreBox(t.scoreLabel, score),
+                      _buildScoreBox(t.bestLabel, bestScore),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _iconButton(Icons.undo, _undoMove),
+                      const SizedBox(width: 8),
+                      _iconButton(Icons.refresh, _setupNewGame),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Swiper(
+                    up: () => _merge(SwipeDirection.up),
+                    down: () => _merge(SwipeDirection.down),
+                    left: () => _merge(SwipeDirection.left),
+                    right: () => _merge(SwipeDirection.right),
+                    child: Container(
+                      height: gridSize,
+                      width: gridSize,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(cornerRadius),
+                        color: darkBrown,
+                      ),
+                      child: Stack(children: stackItems),
+                    ),
+                  ),
+                ],
               ),
             );
           },
