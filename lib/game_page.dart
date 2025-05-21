@@ -5,6 +5,11 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'game/tile.dart';
 import 'game/grid_properties.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+
 
 enum SwipeDirection { up, down, left, right }
 
@@ -46,6 +51,7 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
     super.initState();
     controller = AnimationController(duration: const Duration(milliseconds: 200), vsync: this);
     controller.addStatusListener((status) {
+      _loadBestScore();
       if (status == AnimationStatus.completed) {
         setState(() {
           for (var e in toAdd) {
@@ -85,6 +91,33 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
       _addNewTiles([2, 2]);
       controller.forward(from: 0);
     });
+  }
+
+  Future<void> _loadBestScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localBest = prefs.getInt('best_score') ?? 0;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final firebaseBest = doc.data()?['bestScore'] ?? 0;
+      final maxScore = (firebaseBest is int && firebaseBest > localBest) ? firebaseBest : localBest;
+
+      setState(() {
+        bestScore = maxScore;
+      });
+      await _saveBestScore(maxScore); // Sync local with Firebase if needed
+    } else {
+      setState(() {
+        bestScore = localBest;
+      });
+    }
+  }
+
+
+  Future<void> _saveBestScore(int score) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('best_score', score);
   }
 
   void _addNewTiles(List<int> values) {
@@ -229,25 +262,50 @@ class _GamePageState extends State<GamePage> with SingleTickerProviderStateMixin
     });
   }
 
-  void _showGameOverDialog() {
+  void _showGameOverDialog() async {
     final t = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(t.gameOver),
-        content: Text("${t.finalScore}: $score"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _setupNewGame();
-            },
-            child: Text(t.restart),
-          ),
-        ],
-      ),
-    );
+    final navigator = Navigator.of(context);
+    if (score > bestScore) {
+      setState(() {
+        bestScore = score;
+      });
+      await _saveBestScore(score);      // Save locally
+      await _uploadBestScoreToFirebase(score);  // Save remotely
+    }
+    if(mounted) {
+      await showDialog(
+        context: context,
+        builder: (_) =>
+            AlertDialog(
+              title: Text(t.gameOver),
+              content: Text("${t.finalScore}: $score"),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    navigator.pop();
+                    _setupNewGame();
+                  },
+                  child: Text(t.restart),
+                ),
+              ],
+            ),
+      );
+    }
   }
+
+  Future<void> _uploadBestScoreToFirebase(int score) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+    try {
+      await userDoc.set({'bestScore': score}, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Failed to upload best score: $e");
+    }
+  }
+
 
   Widget _buildScoreBox(String label, int value) {
     return Container(
