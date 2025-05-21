@@ -15,6 +15,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nicknameController=TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   String? _error;
@@ -37,6 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'language': 'kk',
         'theme': 'system',
+        'name':_nicknameController.text,
       });
 
       final prefs = await SharedPreferences.getInstance();
@@ -86,6 +88,17 @@ class _RegisterPageState extends State<RegisterPage> {
                 validator: (value) => value != null && value.contains('@')
                     ? null
                     : 'Enter a valid email',
+              ),const SizedBox(height: 20),
+              TextFormField(
+                controller: _nicknameController,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.short_text),
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value != null && value.length >= 3
+                    ? null
+                    : 'Minimum 3 characters',
               ),
               const SizedBox(height: 16),
               TextFormField(

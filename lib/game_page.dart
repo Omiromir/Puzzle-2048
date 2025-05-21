@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:game_2048/main.dart';
 import 'game/tile.dart';
 import 'game/grid_properties.dart';
 import 'package:intl/intl.dart';
@@ -99,8 +100,10 @@ class _GamePageState extends State<GamePage>
   Future<void> _loadBestScore() async {
     final prefs = await SharedPreferences.getInstance();
     final localBest = prefs.getInt('best_score') ?? 0;
-
-    final user = FirebaseAuth.instance.currentUser;
+    User? user;
+    if(connectionNotifier.value!=ConnectionStatus.online){
+     user = FirebaseAuth.instance.currentUser;
+    }
     if (user != null) {
       final doc = await FirebaseFirestore.instance
           .collection('users')
@@ -308,6 +311,7 @@ class _GamePageState extends State<GamePage>
   }
 
   Future<void> _uploadBestScoreToFirebase(int score) async {
+    if(connectionNotifier.value!=ConnectionStatus.online) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 

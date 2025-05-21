@@ -27,6 +27,6 @@
   "score": "Ұпай: {score}",
   "scoreLabel": "Ұпай",
   "bestLabel": "Үздік",
-  "name": "Аты"
-
+  "name": "Аты",
+  "noScoresYet": "Әзірге ұпай жоқ"
 }

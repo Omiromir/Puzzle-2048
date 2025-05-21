@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'game/grid_properties.dart';
@@ -8,15 +11,6 @@ class LeaderboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-
-    final List<Map<String, dynamic>> sampleScores = [
-      {'name': 'Alice', 'score': 2048},
-      {'name': 'Bob', 'score': 1720},
-      {'name': 'Charlie', 'score': 1616},
-      {'name': 'Diana', 'score': 1536},
-      {'name': 'Ethan', 'score': 1450},
-      {'name': 'Fiona', 'score': 1320},
-    ];
 
     return Scaffold(
       backgroundColor: tan,
@@ -49,11 +43,40 @@ class LeaderboardPage extends StatelessWidget {
                   _buildHeaderRow(t.name, t.scoreLabel),
                   const Divider(thickness: 1.5),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: sampleScores.length,
-                      itemBuilder: (context, index) {
-                        final player = sampleScores[index];
-                        return _buildScoreRow(player['name'], player['score'], index);
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .orderBy('bestScore', descending: true)
+                          .limit(50)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return Center(child: Text(t.noScoresYet));
+                        }
+
+                        final currentUid = FirebaseAuth.instance.currentUser?.uid;
+                        if (kDebugMode) {
+                          print(currentUid);
+                        }
+                        final scores = snapshot.data!.docs;
+
+                        return ListView.builder(
+                          itemCount: scores.length,
+                          itemBuilder: (context, index) {
+                            final data = scores[index].data() as Map<String, dynamic>;
+                            final isCurrentUser = scores[index].id == currentUid;
+
+                            return _buildScoreRow(
+                              name: data['name'] ?? 'Unknown',
+                              score: data['bestScore'] ?? 0,
+                              index: index,
+                              highlight: isCurrentUser,
+                            );
+                          },
+                        );
                       },
                     ),
                   ),
@@ -92,13 +115,21 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreRow(String name, int score, int index) {
+  Widget _buildScoreRow({
+    required String name,
+    required int score,
+    required int index,
+    required bool highlight,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: numTileColor[sampleScoreColor(score)],
+        color: highlight
+            ? Colors.greenAccent.withOpacity(0.3)
+            : numTileColor[sampleScoreColor(score)],
         borderRadius: BorderRadius.circular(10),
+        border: highlight ? Border.all(color: Colors.green, width: 2) : null,
       ),
       child: Row(
         children: [
@@ -109,7 +140,10 @@ class LeaderboardPage extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             flex: 3,
-            child: Text(name, style: const TextStyle(fontSize: 16)),
+            child: Text(
+              name,
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
           Expanded(
             child: Text(
@@ -123,7 +157,6 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  /// Choose a color based on score value
   int sampleScoreColor(int score) {
     if (score >= 2048) return 2048;
     if (score >= 1024) return 1024;

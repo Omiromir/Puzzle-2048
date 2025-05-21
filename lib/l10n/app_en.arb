@@ -26,7 +26,7 @@
   "score": "Score: {score}",
   "scoreLabel": "Score",
   "name": "Name",
-  "bestLabel": "Record"
-
+  "bestLabel": "Record",
+  "noScoresYet": "No scores yet"
   
 }

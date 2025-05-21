@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -6,6 +10,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:game_2048/register_page.dart';
 import 'package:provider/provider.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
@@ -14,12 +19,17 @@ import 'home_page.dart';
 import 'login_page.dart';
 import 'settings_page.dart';
 
+final internetChecker = CheckInternetConnection();
+final connectionNotifier = ConnectionStatusValueNotifier();
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final settings = SettingsController();
   await settings.loadFromPrefs();
+  syncScoreIfConnected();
 
   runApp(
     ChangeNotifierProvider.value(
@@ -132,6 +142,7 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _fetchUserPreferences() async {
+    if(connectionNotifier.value!=ConnectionStatus.online) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final userDoc =
@@ -144,10 +155,13 @@ class _AuthGateState extends State<AuthGate> {
         final String themeMode = userData['theme'] ?? 'system';
 
         // Update settings controller with fetched data
-        final settingsController =
-            Provider.of<SettingsController>(context, listen: false);
-        settingsController.updateLocale(Locale(languageCode));
-        settingsController.updateTheme(_getThemeModeFromString(themeMode));
+        if(mounted) {
+          final settingsController =
+          Provider.of<SettingsController>(context, listen: false);
+
+          settingsController.updateLocale(Locale(languageCode));
+          settingsController.updateTheme(_getThemeModeFromString(themeMode));
+        }
       }
     }
   }
@@ -203,7 +217,7 @@ class _MainScreenState extends State<MainScreen> {
         controller: _pageController,
         onPageChanged: _onPageChanged,
         children: [
-          HomePage(setLocale: widget.setLocale),
+          HomePage(setLocale: widget.setLocale, bestScore: 15432,),
           const AboutPage(),
           SettingsPage(
             currentThemeMode: Theme.of(context).brightness == Brightness.dark
@@ -252,14 +266,13 @@ class SettingsController extends ChangeNotifier {
     _themeMode = _getThemeModeFromString(theme);
     notifyListeners();
   }
-
   Future<void> updateLocale(Locale newLocale) async {
     if (_locale == newLocale) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', newLocale.languageCode);
     _locale = newLocale;
     notifyListeners();
-    await _updateUserPreferenceInFirestore('language', newLocale.languageCode);
+    await _updateUserPreferenceInFirestore('languageCode', newLocale.languageCode);
   }
 
   Future<void> updateTheme(ThemeMode mode) async {
@@ -268,11 +281,12 @@ class SettingsController extends ChangeNotifier {
     await prefs.setString('theme', _getStringFromThemeMode(mode));
     _themeMode = mode;
     notifyListeners();
-    await _updateUserPreferenceInFirestore('theme', _getStringFromThemeMode(mode));
+    await _updateUserPreferenceInFirestore('themeMode', _getStringFromThemeMode(mode));
   }
 
   Future<void> _updateUserPreferenceInFirestore(
       String field, String value) async {
+    if(connectionNotifier.value!=ConnectionStatus.online) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final userDoc =
@@ -304,4 +318,91 @@ class SettingsController extends ChangeNotifier {
   }
 
 
+
+}
+enum ConnectionStatus {
+  online,
+  offline,
+}
+class CheckInternetConnection {
+  final Connectivity _connectivity = Connectivity();
+
+  // Default will be online. This controller will help to emit new states when the connection changes.
+  final _controller = BehaviorSubject.seeded(ConnectionStatus.online);
+  StreamSubscription? _connectionSubscription;
+
+  CheckInternetConnection() {
+    _checkInternetConnection();
+  }
+
+  // The [ConnectionStatusValueNotifier] will subscribe to this
+  // stream and every time the connection status changes it
+  // will update its value
+  Stream<ConnectionStatus> internetStatus() {
+    _connectionSubscription ??= _connectivity.onConnectivityChanged
+        .listen((_) => _checkInternetConnection());
+    return _controller.stream;
+  }
+
+  // Code from StackOverflow
+  Future<void> _checkInternetConnection() async {
+    try {
+      // Sometimes, after we connect to a network, this function will
+      // be called but the device still does not have an internet connection.
+      // This 3 seconds delay will give some time to the device to
+      // connect to the internet in order to avoid false-positives
+      await Future.delayed(const Duration(seconds: 3));
+      final result = await InternetAddress.lookup('google.com');
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        _controller.sink.add(ConnectionStatus.online);
+      } else {
+        _controller.sink.add(ConnectionStatus.offline);
+      }
+    } on SocketException catch (_) {
+      _controller.sink.add(ConnectionStatus.offline);
+    }
+  }
+
+  Future<void> close() async {
+    // Cancel subscription and close controller
+    await _connectionSubscription?.cancel();
+    await _controller.close();
+  }
+}
+class ConnectionStatusValueNotifier extends ValueNotifier<ConnectionStatus> {
+  // Will keep a subscription to
+  // the class [CheckInternetConnection]
+  late StreamSubscription _connectionSubscription;
+
+  ConnectionStatusValueNotifier() : super(ConnectionStatus.online) {
+    // Everytime there a new connection status is emitted
+    // we will update the [value]. This will make the widget
+    // to rebuild
+    _connectionSubscription = internetChecker
+        .internetStatus()
+        .listen((newStatus) => value = newStatus);
+  }
+
+  @override
+  void dispose() {
+    _connectionSubscription.cancel();
+    super.dispose();
+  }
+}
+void syncScoreIfConnected() async {
+  if (connectionNotifier.value == ConnectionStatus.online) {
+    final prefs = await SharedPreferences.getInstance();
+    final int? unsyncedScore = prefs.getInt('best_score');
+    if (unsyncedScore != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final userDoc =FirebaseFirestore.instance.collection('users').doc(user.uid);
+        try {
+          await userDoc.set({'bestScore': unsyncedScore}, SetOptions(merge: true));
+        } catch (e) {
+          debugPrint("Failed to upload best score: $e");
+        }
+      }
+    }
+  }
 }
