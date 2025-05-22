@@ -13,9 +13,9 @@ class LeaderboardPage extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: tan,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: tan,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -23,11 +23,9 @@ class LeaderboardPage extends StatelessWidget {
         ),
         title: Text(
           t.leaderboard,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.brown,
-          ),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         centerTitle: true,
       ),
@@ -40,7 +38,7 @@ class LeaderboardPage extends StatelessWidget {
               child: Column(
                 children: [
                   const SizedBox(height: 12),
-                  _buildHeaderRow(t.name, t.scoreLabel),
+                  _buildHeaderRow(context, t.name, t.scoreLabel),
                   const Divider(thickness: 1.5),
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
@@ -70,6 +68,7 @@ class LeaderboardPage extends StatelessWidget {
                             final isCurrentUser = scores[index].id == currentUid;
 
                             return _buildScoreRow(
+                              context: context,
                               name: data['name'] ?? 'Unknown',
                               score: data['bestScore'] ?? 0,
                               index: index,
@@ -89,7 +88,7 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderRow(String nameLabel, String scoreLabel) {
+  Widget _buildHeaderRow(BuildContext context, String nameLabel, String scoreLabel) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
       child: Row(
@@ -100,14 +99,14 @@ class LeaderboardPage extends StatelessWidget {
             flex: 3,
             child: Text(
               nameLabel,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(
             child: Text(
               scoreLabel,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -116,40 +115,45 @@ class LeaderboardPage extends StatelessWidget {
   }
 
   Widget _buildScoreRow({
+    required BuildContext context,
     required String name,
     required int score,
     required int index,
     required bool highlight,
   }) {
+    final Color background = highlight
+        ? Theme.of(context).colorScheme.secondary.withOpacity(0.3)
+        : numTileColor[sampleScoreColor(score)] ?? Theme.of(context).colorScheme.surfaceVariant;
+
+    final Color border = highlight ? Colors.green : Colors.transparent;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: highlight
-            ? Colors.greenAccent.withOpacity(0.3)
-            : numTileColor[sampleScoreColor(score)],
+        color: background,
         borderRadius: BorderRadius.circular(10),
-        border: highlight ? Border.all(color: Colors.green, width: 2) : null,
+        border: Border.all(color: border, width: highlight ? 2 : 0),
       ),
       child: Row(
         children: [
           Text(
             "#${index + 1}",
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 12),
           Expanded(
             flex: 3,
             child: Text(
               name,
-              style: const TextStyle(fontSize: 16),
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
           Expanded(
             child: Text(
               score.toString(),
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],

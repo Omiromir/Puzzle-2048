@@ -330,13 +330,13 @@ class _GamePageState extends State<GamePage>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.brown[300],
+      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
           Text(label.toUpperCase(),
-              style: const TextStyle(fontSize: 12, color: Colors.white)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white)),
           Text('$value',
               style: const TextStyle(
                   fontSize: 20,
@@ -379,9 +379,9 @@ class _GamePageState extends State<GamePage>
     ];
 
     return Scaffold(
-      backgroundColor: tan,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: tan,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -391,13 +391,12 @@ class _GamePageState extends State<GamePage>
           },
         ),
         title: Text(
-          "2048",
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.brown[800],
-          ),
-        ),
+            "2048",
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+            ),
+           ),  
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -525,7 +524,7 @@ class _GamePageState extends State<GamePage>
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: Colors.brown[300],
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.85),
         borderRadius: BorderRadius.circular(6),
       ),
       child: IconButton(
