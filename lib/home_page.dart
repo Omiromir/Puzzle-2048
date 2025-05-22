@@ -1,12 +1,54 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'game_page.dart';
 import 'leaderboard_page.dart';
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final void Function(Locale) setLocale;
-  final int bestScore;
-  const HomePage({super.key, required this.setLocale, required this.bestScore});
+
+  const HomePage({super.key, required this.setLocale});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int? bestScore;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchBestScore();
+  }
+
+  Future<void> fetchBestScore() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (!mounted) return;
+    if (uid == null) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (!mounted) return;
+    if (doc.exists) {
+      final data = doc.data()!;
+      setState(() {
+        bestScore = data['bestScore'] ?? 0;
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        bestScore = 0;
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +84,10 @@ class HomePage extends StatelessWidget {
                             color: Colors.deepPurple,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            t.bestScore(bestScore),
+                          child: isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Text(
+                            t.bestScore(bestScore ?? 0),
                             style: const TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
@@ -71,7 +115,7 @@ class HomePage extends StatelessWidget {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount:2,
+                            crossAxisCount: 2,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                             childAspectRatio: isWide ? 1.1 : 1.2,
@@ -81,14 +125,14 @@ class HomePage extends StatelessWidget {
                             List<String> labels = [t.newGame, t.leaderboard];
                             List<IconData> icons = [Icons.play_arrow, Icons.emoji_events];
                             List<VoidCallback> actions = [
-                              () => Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const GamePage()),
-                                  ),
-                              () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const LeaderboardPage()),
-                                  ),
+                                  () => Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => const GamePage()),
+                              ),
+                                  () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LeaderboardPage()),
+                              ),
                             ];
 
                             return InkWell(

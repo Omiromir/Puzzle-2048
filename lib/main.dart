@@ -217,7 +217,7 @@ class _MainScreenState extends State<MainScreen> {
         controller: _pageController,
         onPageChanged: _onPageChanged,
         children: [
-          HomePage(setLocale: widget.setLocale, bestScore: 15432,),
+          HomePage(setLocale: widget.setLocale),
           const AboutPage(),
           SettingsPage(
             currentThemeMode: Theme.of(context).brightness == Brightness.dark
@@ -272,7 +272,7 @@ class SettingsController extends ChangeNotifier {
     await prefs.setString('language', newLocale.languageCode);
     _locale = newLocale;
     notifyListeners();
-    await _updateUserPreferenceInFirestore('languageCode', newLocale.languageCode);
+    await _updateUserPreferenceInFirestore('language', newLocale.languageCode);
   }
 
   Future<void> updateTheme(ThemeMode mode) async {
@@ -281,7 +281,7 @@ class SettingsController extends ChangeNotifier {
     await prefs.setString('theme', _getStringFromThemeMode(mode));
     _themeMode = mode;
     notifyListeners();
-    await _updateUserPreferenceInFirestore('themeMode', _getStringFromThemeMode(mode));
+    await _updateUserPreferenceInFirestore('theme', _getStringFromThemeMode(mode));
   }
 
   Future<void> _updateUserPreferenceInFirestore(

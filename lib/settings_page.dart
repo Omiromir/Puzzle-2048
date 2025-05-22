@@ -50,8 +50,8 @@ class _SettingsPageState extends State<SettingsPage> {
       if (doc.exists) {
         final data = doc.data();
         if (data != null) {
-          final String lang = data['languageCode'] ?? widget.currentLocale.languageCode;
-          final String themeStr = data['themeMode'] ?? 'system';
+          final String lang = data['language'] ?? widget.currentLocale.languageCode;
+          final String themeStr = data['theme'] ?? 'system';
 
           final ThemeMode theme = switch (themeStr) {
             'dark' => ThemeMode.dark,
@@ -81,8 +81,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (user != null) {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'languageCode': _selectedLanguage,
-        'themeMode': switch (_selectedTheme) {
+        'language': _selectedLanguage,
+        'theme': switch (_selectedTheme) {
           ThemeMode.dark => 'dark',
           ThemeMode.light => 'light',
           ThemeMode.system => 'system',
