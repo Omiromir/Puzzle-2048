@@ -18,10 +18,10 @@ workflows:
             grep -q "platform :ios, '13.0'" Podfile || echo "platform :ios, '13.0'" >> Podfile
           fi
           cd ..
-      - name: Install dependencies and generate localization
-        script: |
-          flutter pub get
-          flutter gen-l10n
+      - name: Install Flutter dependencies
+        script: flutter pub get
+      - name: Generate localization
+        script: flutter gen-l10n
       - name: Build iOS Simulator App
         script: flutter build ios --simulator
       - name: Zip the .app file
@@ -30,4 +30,3 @@ workflows:
           zip -r build/ios/ipa/Runner.app.zip build/ios/iphonesimulator/Runner.app
     artifacts:
       - build/ios/ipa/Runner.app.zip
-
