@@ -20,6 +20,12 @@ workflows:
           cd ..
       - name: Install Flutter dependencies
         script: flutter pub get
+      - name: Clean and prepare CocoaPods
+        script: |
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install
+          cd ..
       - name: Generate localization
         script: flutter gen-l10n
       - name: Build iOS Simulator App
@@ -30,4 +36,3 @@ workflows:
           zip -r build/ios/ipa/Runner.app.zip build/ios/iphonesimulator/Runner.app
     artifacts:
       - build/ios/ipa/Runner.app.zip
-
