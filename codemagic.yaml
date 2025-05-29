@@ -5,6 +5,19 @@ workflows:
       flutter: stable
       xcode: latest
     scripts:
+      - name: Set iOS deployment target to 13.0 (create or update Podfile)
+        script: |
+          cd ios
+          if [ ! -f Podfile ]; then
+            echo "Creating Podfile..."
+            pod init
+            sed -i '' "s/# platform :ios.*/platform :ios, '13.0'/" Podfile
+          else
+            echo "Updating Podfile..."
+            sed -i '' "s/platform :ios, '.*'/platform :ios, '13.0'/" Podfile || echo "Setting platform line"
+            grep -q "platform :ios, '13.0'" Podfile || echo "platform :ios, '13.0'" >> Podfile
+          fi
+          cd ..
       - name: Install dependencies and generate localization
         script: |
           flutter pub get
@@ -17,3 +30,4 @@ workflows:
           zip -r build/ios/ipa/Runner.app.zip build/ios/iphonesimulator/Runner.app
     artifacts:
       - build/ios/ipa/Runner.app.zip
+
