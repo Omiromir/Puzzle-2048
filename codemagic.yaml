@@ -5,34 +5,40 @@ workflows:
       flutter: stable
       xcode: latest
     scripts:
-      - name: Set iOS deployment target to 13.0 (create or update Podfile)
+      - name: Clean and fetch packages
+        script: |
+          flutter clean
+          flutter pub get
+      - name: Set iOS deployment target and install CocoaPods
         script: |
           cd ios
           if [ ! -f Podfile ]; then
-            echo "Creating Podfile..."
             pod init
-            sed -i '' "s/# platform :ios.*/platform :ios, '13.0'/" Podfile
-          else
-            echo "Updating Podfile..."
-            sed -i '' "s/platform :ios, '.*'/platform :ios, '13.0'/" Podfile || echo "Setting platform line"
-            grep -q "platform :ios, '13.0'" Podfile || echo "platform :ios, '13.0'" >> Podfile
           fi
-          cd ..
-      - name: Install Flutter dependencies
-        script: flutter pub get
-      - name: Clean and prepare CocoaPods
-        script: |
-          cd ios
+          # Set platform to iOS 13
+          sed -i '' "s/^#\? *platform :ios.*/platform :ios, '13.0'/" Podfile || echo "platform :ios, '13.0'" >> Podfile
+
+          # Disable Bitcode (optional but helps with Firebase)
+          echo "
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['ENABLE_BITCODE'] = 'NO'
+              end
+            end
+          end
+          " >> Podfile
+
           rm -rf Pods Podfile.lock
           pod install
           cd ..
-      - name: Generate localization
+      - name: Generate localization (optional)
         script: flutter gen-l10n
-      - name: Build iOS Simulator App
-        script: flutter build ios --simulator
-      - name: Zip the .app file
+      - name: Build iOS release app
+        script: flutter build ios --release
+      - name: Export .ipa
         script: |
           mkdir -p build/ios/ipa
-          zip -r build/ios/ipa/Runner.app.zip build/ios/iphonesimulator/Runner.app
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/
     artifacts:
-      - build/ios/ipa/Runner.app.zip
+      - build/ios/ipa/**
