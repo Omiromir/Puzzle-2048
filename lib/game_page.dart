@@ -390,13 +390,6 @@ class _GamePageState extends State<GamePage>
             Navigator.of(context).pushReplacementNamed('/main');
           },
         ),
-        title: Text(
-            "2048",
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-            ),
-           ),  
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
