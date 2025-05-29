@@ -19,17 +19,15 @@ workflows:
           fi
           cd ..
       - name: Install Flutter dependencies
-        script: |
-          flutter pub get
+        script: flutter pub get
       - name: Generate localization
-        script: |
-          flutter gen-l10n
+        script: flutter gen-l10n
       - name: Build iOS Simulator App
-        script: |
-          flutter build ios --simulator
+        script: flutter build ios --simulator
       - name: Zip the .app file
         script: |
           mkdir -p build/ios/ipa
           zip -r build/ios/ipa/Runner.app.zip build/ios/iphonesimulator/Runner.app
     artifacts:
       - build/ios/ipa/Runner.app.zip
+
