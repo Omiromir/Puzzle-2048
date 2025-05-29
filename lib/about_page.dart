@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';  // Import localization file
+import 'l10n/app_localizations.dart';  // Import localization file
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
