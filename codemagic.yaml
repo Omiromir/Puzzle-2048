@@ -11,20 +11,23 @@ workflows:
           if [ ! -f Podfile ]; then
             echo "Creating Podfile..."
             pod init
-            sed -i '' "s/# platform :ios.*/platform :ios, '13.0'/" Podfile
-          else
-            echo "Updating Podfile..."
-            sed -i '' "s/platform :ios, '.*'/platform :ios, '13.0'/" Podfile || echo "Setting platform line"
-            grep -q "platform :ios, '13.0'" Podfile || echo "platform :ios, '13.0'" >> Podfile
           fi
+          sed -i '' "s/platform :ios, .*/platform :ios, '13.0'/" Podfile || echo "platform :ios, '13.0'" >> Podfile
           cd ..
       - name: Clean and get dependencies
         script: |
           flutter clean
           flutter pub get
-      - name: Generate localization files
+      - name: Verify and generate localization files
         script: |
+          echo "ARB files:"
+          ls lib/l10n || echo "⚠️ No ARB files found in lib/l10n"
+          
+          echo "Running gen-l10n..."
           flutter gen-l10n
+          
+          echo "Generated localization output:"
+          ls .dart_tool/flutter_gen/gen_l10n || echo "❌ Localization files not generated!"
       - name: Build for iOS simulator
         script: |
           flutter build ios --simulator --no-codesign
@@ -34,4 +37,3 @@ workflows:
           zip -r build/ios/ipa/Runner.app.zip build/ios/iphonesimulator/Runner.app
     artifacts:
       - build/ios/ipa/Runner.app.zip
-
