@@ -29,6 +29,10 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.3
   flutter_lints: ^5.0.0
+  flutter_gen: any
+  # Optional: if you use localization or code generation, add below
+  # flutter_gen_runner: ^5.3.0
+  # build_runner: ^2.4.0
 
 flutter_icons:
   android: true
